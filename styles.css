@@ -135,6 +135,7 @@
   .why-grid{display:grid;grid-template-columns:1fr 1fr;gap:.2rem 3rem;max-width:820px;margin:0 auto;}
   .why-item{display:flex;align-items:center;gap:1rem;padding:1.1rem 0;border-bottom:1px solid rgba(255,255,255,0.08);}
   .why-emoji{font-size:1.25rem;flex-shrink:0;width:1.8rem;text-align:center;}
+  .why-flag svg{width:1.5rem;height:auto;display:inline-block;border-radius:2px;vertical-align:middle;}
   .why-text{font-size:.92rem;color:rgba(247,244,238,0.85);font-weight:500;line-height:1.4;}
   .usa-u{color:#e0473c;font-weight:700;}
   .usa-s{color:#ffffff;font-weight:700;}
@@ -288,6 +289,7 @@
 }
 .mf-why-list li:last-child{border-bottom:none;}
 .mf-emoji{font-size:1.1rem;flex-shrink:0;width:1.5rem;text-align:center;}
+.mf-flag svg{width:1.3rem;height:auto;display:inline-block;border-radius:2px;vertical-align:middle;}
 
 .mf-contact{background:var(--cream);padding:2.6rem 7vw 2rem;text-align:center;}
 .mf-contact-label{
