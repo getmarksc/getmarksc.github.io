@@ -25,7 +25,7 @@
     <li><a href="#services">Services</a></li>
     <li><a href="#contact">Contact</a></li>
   </ul>
-  <a href="mailto:getmarksc@gmail.com" class="nav-cta">Get a Free Quote</a>
+  <a href="#" class="nav-cta" onclick="event.preventDefault();openQuoteForm()">Get a Free Quote</a>
 </nav>
 
 <!-- HERO -->
@@ -40,7 +40,7 @@
       <h1 class="brand">GET MARK</h1>
       <p class="hero-sub">Serving Orangeburg &amp; the surrounding communities</p>
       <div class="hero-actions">
-        <a href="mailto:getmarksc@gmail.com" class="btn-primary">Request a free quote</a>
+        <a href="#" class="btn-primary" onclick="event.preventDefault();openQuoteForm()">Request a free quote</a>
         <a href="#services" class="btn-ghost">See our services</a>
       </div>
       <div class="verse">
@@ -263,7 +263,7 @@
     <h2>Let's get your space looking its best</h2>
   </div>
   <div class="cta-actions">
-    <a href="mailto:getmarksc@gmail.com" class="btn-white">Request a free quote</a>
+    <a href="#" class="btn-white" onclick="event.preventDefault();openQuoteForm()">Request a free quote</a>
     <p class="cta-phone">Or text/call <a href="tel:8439017602">843-901-7602</a></p>
   </div>
 </div>
@@ -296,7 +296,7 @@
     <div class="footer-col">
       <h4>Get in Touch</h4>
       <ul>
-        <li><svg viewBox="0 0 24 24" fill="none" stroke="#d8b968" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6" /></svg><a href="mailto:getmarksc@gmail.com">getmarksc@gmail.com</a></li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="#d8b968" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6" /></svg><a href="#" onclick="event.preventDefault();openQuoteForm()">getmarksc@gmail.com</a></li>
         <li><svg viewBox="0 0 24 24" fill="none" stroke="#d8b968" stroke-width="1.8"><path d="M5 4h3l1.5 4-2 1.5a11 11 0 0 0 5 5l1.5-2 4 1.5v3a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/></svg><a href="tel:8439017602">843-901-7602</a></li>
       </ul>
     </div>
@@ -328,7 +328,7 @@
     &ldquo;&hellip;because he is helpful to me.&rdquo;
     <cite>2 Timothy 4:11</cite>
   </blockquote>
-  <a href="mailto:getmarksc@gmail.com" class="mf-cta-btn">Request a Free Quote</a>
+  <a href="#" class="mf-cta-btn" onclick="event.preventDefault();openQuoteForm()">Request a Free Quote</a>
 </header>
 
 <section class="mf-pillars">
@@ -384,7 +384,7 @@
 
 <section class="mf-contact" id="mf-contact">
   <p class="mf-contact-label">Get in touch</p>
-  <a class="mf-contact-line" href="mailto:getmarksc@gmail.com">
+  <a class="mf-contact-line" href="#" onclick="event.preventDefault();openQuoteForm()">
     <svg viewBox="0 0 24 24" fill="none" stroke="#101f38" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>
     getmarksc@gmail.com
   </a>
@@ -392,7 +392,7 @@
     <svg viewBox="0 0 24 24" fill="none" stroke="#101f38" stroke-width="1.8"><path d="M5 4h3l1.5 4-2 1.5a11 11 0 0 0 5 5l1.5-2 4 1.5v3a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/></svg>
     843-901-7602
   </a>
-  <a href="mailto:getmarksc@gmail.com" class="mf-cta-btn mf-cta-btn-block">Request a Free Quote</a>
+  <a href="#" class="mf-cta-btn mf-cta-btn-block" onclick="event.preventDefault();openQuoteForm()">Request a Free Quote</a>
 </section>
 
 <footer class="mf-footer">
@@ -401,6 +401,66 @@
 </footer>
 
 </div><!-- /mobile-site -->
+
+<!-- QUOTE REQUEST MODAL (shared by desktop + mobile) -->
+<div class="qf-overlay" id="qf-overlay" onclick="qfCloseOnOverlay(event)">
+  <div class="qf-modal" role="dialog" aria-modal="true" aria-labelledby="qf-title">
+    <button class="qf-close" type="button" onclick="closeQuoteForm()" aria-label="Close">&times;</button>
+
+    <div id="qf-body">
+      <p class="qf-eyebrow">Get a free quote</p>
+      <h2 class="qf-title" id="qf-title">Tell us about your space</h2>
+      <p class="qf-sub">Share a few details and Mark will follow up directly &mdash; usually within a day.</p>
+
+      <form id="qf-form" novalidate>
+        <div class="qf-row2">
+          <div class="qf-group">
+            <label class="qf-label" for="qf-first">First Name *</label>
+            <input class="qf-input" id="qf-first" type="text" placeholder="Jane" autocomplete="given-name">
+          </div>
+          <div class="qf-group">
+            <label class="qf-label" for="qf-last">Last Name</label>
+            <input class="qf-input" id="qf-last" type="text" placeholder="Smith" autocomplete="family-name">
+          </div>
+        </div>
+
+        <div class="qf-group">
+          <label class="qf-label" for="qf-phone">Phone Number *</label>
+          <input class="qf-input" id="qf-phone" type="tel" placeholder="(843) 555-0100" autocomplete="tel">
+        </div>
+
+        <div class="qf-group">
+          <label class="qf-label" for="qf-email">Email Address *</label>
+          <input class="qf-input" id="qf-email" type="email" placeholder="jane@email.com" autocomplete="email">
+        </div>
+
+        <div class="qf-group">
+          <label class="qf-label" for="qf-type">Property Type</label>
+          <select class="qf-input qf-select" id="qf-type">
+            <option value="Office">Office</option>
+            <option value="Church">Church</option>
+            <option value="Professional Building">Professional Building</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+
+        <div class="qf-group">
+          <label class="qf-label" for="qf-desc">Tell us about the space</label>
+          <textarea class="qf-input qf-textarea" id="qf-desc" placeholder="Approximate size, how often you'd like it cleaned, anything else that would help."></textarea>
+        </div>
+
+        <div class="qf-group">
+          <label class="qf-label" for="qf-avail">Preferred Contact Time</label>
+          <input class="qf-input" id="qf-avail" type="text" placeholder="e.g. Weekday mornings, after 5pm">
+        </div>
+
+        <p class="qf-error" id="qf-error">Please fill in your name, phone, and email so Mark can reach you.</p>
+
+        <button class="qf-submit" type="submit">Request a Free Quote</button>
+      </form>
+    </div>
+  </div>
+</div>
 
 <script src="script.js"></script>
 
