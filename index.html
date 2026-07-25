@@ -11,6 +11,36 @@
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,600;0,700;1,500&family=Caveat:wght@500;600&family=Inter:wght@300;400;500;600&display=swap">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,600;0,700;1,500&family=Caveat:wght@500;600&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
+<style>
+  /* Hold text invisible until fonts are ready, then fade in fast.
+     Safety timeout below guarantees content shows even if font
+     loading detection fails for any reason. */
+  html:not(.fonts-loaded) body{opacity:0;}
+  html.fonts-loaded body,html.fonts-timeout body{
+    opacity:1;transition:opacity .18s ease-out;
+  }
+</style>
+<noscript><style>body{opacity:1 !important;}</style></noscript>
+<script>
+  (function(){
+    var html = document.documentElement;
+    var done = false;
+    function reveal(cls){
+      if (done) return;
+      done = true;
+      html.classList.add(cls);
+    }
+    // Safety net: never hide content for more than 600ms, no matter what.
+    setTimeout(function(){ reveal('fonts-timeout'); }, 600);
+
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(function(){ reveal('fonts-loaded'); });
+    } else {
+      // Old browser without the Font Loading API — just show content.
+      reveal('fonts-timeout');
+    }
+  })();
+</script>
 </head>
 <body>
 
