@@ -86,8 +86,7 @@ function qfShowThanks() {
     '<div class="qf-thanks">' +
       '<div class="qf-thanks-icon">&#10003;</div>' +
       '<h2 class="qf-title">Request received</h2>' +
-      '<p class="qf-sub">Thank you for reaching out. Mark will review your request and get back to you soon &mdash; usually within a day.<br><br>' +
-      '<a href="tel:8439017602" style="color:var(--navy);font-weight:600;">843-901-7602</a></p>' +
+      '<p class="qf-sub">Thank you for reaching out. Mark will review your request and get back to you soon &mdash; usually within a day.</p>' +
       '<button class="qf-submit" type="button" onclick="closeQuoteForm()">Close</button>' +
     '</div>';
 }
