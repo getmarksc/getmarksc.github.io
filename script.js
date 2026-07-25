@@ -60,9 +60,6 @@ function qfBindForm() {
 
     if (!first.value.trim() || !phone.value.trim() || !email.value.trim()) {
       errorEl.classList.add('show');
-      if (!first.value.trim()) first.focus();
-      else if (!phone.value.trim()) phone.focus();
-      else email.focus();
       return;
     }
     errorEl.classList.remove('show');
