@@ -4,6 +4,26 @@ window.addEventListener('scroll', () => {
 });
 
 /* ══════════════════════════════════
+   KEEP FIXED HEADERS PINNED ON MOBILE
+   Mobile browsers can leave fixed-position
+   elements slightly offset when the on-screen
+   keyboard opens/closes (e.g. after filling out
+   the quote form). This keeps them locked to the
+   true visible top of the screen at all times.
+══════════════════════════════════ */
+if (window.visualViewport) {
+  var mfTopbar = document.querySelector('.mf-topbar');
+  function pinFixedHeaders() {
+    var offset = window.visualViewport.offsetTop || 0;
+    var shift = offset ? 'translateY(' + offset + 'px)' : '';
+    if (mfTopbar) mfTopbar.style.transform = shift;
+    nav.style.transform = shift;
+  }
+  window.visualViewport.addEventListener('resize', pinFixedHeaders);
+  window.visualViewport.addEventListener('scroll', pinFixedHeaders);
+}
+
+/* ══════════════════════════════════
    QUOTE REQUEST FORM (Formspree)
 ══════════════════════════════════ */
 var QF_FORMSPREE_ID = 'maqrlyza';
