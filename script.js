@@ -8,7 +8,6 @@ window.addEventListener('scroll', () => {
 ══════════════════════════════════ */
 var QF_FORMSPREE_ID = 'maqrlyza';
 var qfOriginalBodyHTML = null;
-var qfSavedScrollY = 0;
 
 function openQuoteForm() {
   var body = document.getElementById('qf-body');
@@ -18,24 +17,12 @@ function openQuoteForm() {
     body.innerHTML = qfOriginalBodyHTML;
   }
 
-  qfSavedScrollY = window.scrollY || window.pageYOffset || 0;
-  document.body.style.position = 'fixed';
-  document.body.style.top = (-qfSavedScrollY) + 'px';
-  document.body.style.left = '0';
-  document.body.style.right = '0';
-
   document.getElementById('qf-overlay').classList.add('open');
   qfBindForm();
 }
 
 function closeQuoteForm() {
   document.getElementById('qf-overlay').classList.remove('open');
-
-  document.body.style.position = '';
-  document.body.style.top = '';
-  document.body.style.left = '';
-  document.body.style.right = '';
-  window.scrollTo({ top: qfSavedScrollY, left: 0, behavior: 'instant' });
 }
 
 function qfCloseOnOverlay(e) {
