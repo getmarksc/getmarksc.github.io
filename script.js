@@ -53,6 +53,10 @@ function qfBindForm() {
   form.addEventListener('submit', function (e) {
     e.preventDefault();
 
+    if (document.activeElement && typeof document.activeElement.blur === 'function') {
+      document.activeElement.blur();
+    }
+
     var first = document.getElementById('qf-first');
     var phone = document.getElementById('qf-phone');
     var email = document.getElementById('qf-email');
