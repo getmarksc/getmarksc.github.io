@@ -65,15 +65,51 @@ function openQuoteForm() {
     body.innerHTML = qfOriginalBodyHTML;
   }
   document.getElementById('qf-overlay').classList.add('open');
-  // qfLockScroll(); // TEMPORARILY DISABLED — testing whether toggling
-  // document.body's position between fixed/normal right at open/close
-  // is what's confusing .mf-topbar's position:sticky "stuck" state.
-  // Re-enable once that's confirmed one way or the other.
+  qfLockScroll();
   qfBindForm();
 }
 function closeQuoteForm() {
   document.getElementById('qf-overlay').classList.remove('open');
-  // qfUnlockScroll(); // see matching note in openQuoteForm() above.
+  qfUnlockScroll();
+  qfNudgeScrollForSticky();
+}
+
+/*
+  Forces iOS to fully recompute position:sticky layout right after
+  the modal closes, instead of waiting for the user to accidentally
+  hit a scroll extreme (which is what was making it self-correct).
+
+  Why this exists: confirmed, by elimination on a real device, that
+  neither the JS transform correction (removed entirely) nor the
+  scroll-lock body-position toggle (tested by disabling it — no
+  change) was the cause of .mf-topbar rendering shifted/clipped right
+  after closing the form and doing a small scroll. The one thing left
+  that's unique to this exact sequence and absent from ordinary
+  scrolling elsewhere on the site is the on-screen keyboard opening
+  and dismissing. That matches the project's original confirmed root
+  cause (iOS's visual viewport briefly out of sync with the layout
+  viewport after keyboard dismissal) — that finding was made against
+  position:fixed, but position:sticky's "am I stuck yet" calculation
+  also depends on current viewport state, so it's plausible it isn't
+  immune to the same desync, just surfacing as a different visible
+  symptom (shifted by roughly half its height instead of fully
+  detached) that resolves once a scroll extreme forces recomputation.
+
+  A tiny, effectively invisible scroll nudge is a known way to force
+  iOS to fully recompute fixed/sticky layout on demand, rather than
+  waiting for the user to scroll far enough to trigger it naturally.
+  This is a hypothesis to verify on-device, not a guaranteed fix —
+  if it doesn't fully resolve things, that's still useful information
+  about what this specific quirk does and doesn't respond to.
+*/
+function qfNudgeScrollForSticky() {
+  requestAnimationFrame(function () {
+    requestAnimationFrame(function () {
+      var y = window.scrollY;
+      window.scrollTo(0, y + 1);
+      window.scrollTo(0, y);
+    });
+  });
 }
 function qfCloseOnOverlay(e) {
   if (e.target === document.getElementById('qf-overlay')) closeQuoteForm();
