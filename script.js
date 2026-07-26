@@ -7,6 +7,45 @@ window.addEventListener('scroll', () => {
 ══════════════════════════════════ */
 var QF_FORMSPREE_ID = 'maqrlyza';
 var qfOriginalBodyHTML = null;
+
+/*
+  Background scroll-lock while modal is open.
+
+  Rationale: while the popup is open, the page behind it is still
+  scrollable (confirmed by observation), alongside the modal's own
+  internal overflow-y:auto scroll region. Two independent active
+  scroll contexts at once, combined with the keyboard opening/closing
+  as the user fills the form, is a plausible contributor to iOS's
+  visualViewport desync behavior addressed elsewhere in this file.
+
+  Note: a scroll-lock attempt was tried previously (see project
+  handoff) using position:fixed + top:-Npx on <body>, and held up for
+  one test sequence before breaking on a slightly different one. This
+  implementation is deliberately identical in technique (the standard
+  approach) but is being reintroduced as an addition alongside the
+  separately-proven visualViewport ceiling/overscroll guard below,
+  rather than as a replacement for it — so if this alone doesn't
+  fully resolve things, it can be isolated and removed without
+  affecting the parts already confirmed working.
+*/
+var qfScrollLockY = 0;
+function qfLockScroll() {
+  qfScrollLockY = window.scrollY;
+  document.body.style.position = 'fixed';
+  document.body.style.top = '-' + qfScrollLockY + 'px';
+  document.body.style.left = '0';
+  document.body.style.right = '0';
+  document.body.style.width = '100%';
+}
+function qfUnlockScroll() {
+  document.body.style.position = '';
+  document.body.style.top = '';
+  document.body.style.left = '';
+  document.body.style.right = '';
+  document.body.style.width = '';
+  window.scrollTo(0, qfScrollLockY);
+}
+
 function openQuoteForm() {
   var body = document.getElementById('qf-body');
   if (qfOriginalBodyHTML === null) {
@@ -15,10 +54,12 @@ function openQuoteForm() {
     body.innerHTML = qfOriginalBodyHTML;
   }
   document.getElementById('qf-overlay').classList.add('open');
+  qfLockScroll();
   qfBindForm();
 }
 function closeQuoteForm() {
   document.getElementById('qf-overlay').classList.remove('open');
+  qfUnlockScroll();
 }
 function qfCloseOnOverlay(e) {
   if (e.target === document.getElementById('qf-overlay')) closeQuoteForm();
@@ -77,38 +118,15 @@ function qfShowThanks() {
 
 /*
   iOS Safari visualViewport / fixed-header desync — CONFIRMED via live
-  device inspection (Web Inspector, Console tab), not inferred.
-
-  At the exact moment the header appeared visibly shifted on a real
-  iPhone, window.visualViewport.offsetTop measured ~31px while
-  .mf-topbar's own computed styles (position, top, box model) and its
-  own compositor layer (Layers tab: single layer, correct 430x85
-  bounds, no stray child layers) were BOTH entirely correct. The
-  ancestor chain (.mobile-site) had no transform and wasn't itself a
-  composited layer. So this is not a CSS bug, not a stale paint layer,
-  and not a rogue transform anywhere in the DOM — it's iOS Safari's
-  visual viewport genuinely sitting offset from the layout viewport
-  for a window of time after the on-screen keyboard dismisses
-  (post form-submit blur), before scrolling forces it to reconcile.
-
-  A prior attempt at a visualViewport-based fix (see project handoff)
-  applied a transform unconditionally on every resize/scroll event,
-  which caused drift on completely ordinary scrolling unrelated to
-  the form. The difference here: only touch .mf-topbar when
-  visualViewport.offsetTop is actually nonzero (confirmed via the
-  live measurement above), and always correct back to exactly that
-  offset — never guess, never apply on scroll events that aren't
-  actually desynced.
+  device inspection. Ceiling + overscroll guard, proven in testing to
+  fix partial-covering and edge-of-page bounce, kept unchanged from
+  the currently-deployed version. This is the safety net for any
+  residual desync not addressed by the scroll-lock above.
 */
 (function () {
   var topbar = document.querySelector('.mf-topbar');
   if (!topbar || !window.visualViewport) return;
 
-  // Smooth out the correction itself: once we've decided to correct
-  // an offset (see the guards below), ease into/out of it over a
-  // short duration instead of snapping frame-by-frame. This absorbs
-  // small residual fluctuations as iOS finishes settling, so the
-  // correction reads as one gentle nudge rather than a jitter.
   topbar.style.transition = 'transform .12s ease-out';
 
   var ticking = false;
@@ -117,13 +135,6 @@ function qfShowThanks() {
     ticking = false;
     var offset = window.visualViewport.offsetTop;
 
-    // iOS rubber-band overscroll (bouncing past the top/bottom edge of
-    // the page) also shifts visualViewport.offsetTop, even with zero
-    // keyboard interaction — that's a false positive for this fix.
-    // Only apply the correction when we're NOT at the page's scroll
-    // extremes, since real overscroll only happens right at those
-    // edges and the keyboard-desync case doesn't care about scroll
-    // position at all.
     var atTop = window.scrollY <= 0;
     var atBottom = window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 1;
 
