@@ -79,59 +79,68 @@ function qfShowThanks() {
   iOS Safari visualViewport / fixed-header desync — CONFIRMED via live
   device inspection (Web Inspector, Console tab), not inferred.
 
-  At the exact moment the header appeared visibly shifted on a real
-  iPhone, window.visualViewport.offsetTop measured ~31px while
-  .mf-topbar's own computed styles (position, top, box model) and its
-  own compositor layer (Layers tab: single layer, correct 430x85
-  bounds, no stray child layers) were BOTH entirely correct. The
-  ancestor chain (.mobile-site) had no transform and wasn't itself a
-  composited layer. So this is not a CSS bug, not a stale paint layer,
-  and not a rogue transform anywhere in the DOM — it's iOS Safari's
-  visual viewport genuinely sitting offset from the layout viewport
-  for a window of time after the on-screen keyboard dismisses
-  (post form-submit blur), before scrolling forces it to reconcile.
+  Root cause: iOS's visual viewport briefly sits offset from the
+  layout viewport after the on-screen keyboard dismisses, while
+  .mf-topbar's own computed styles and compositor layer stay correct
+  throughout. Confirmed guards, proven in testing:
+  - Ceiling: ignore any offset reading larger than the header's own
+    height (filters out bogus/stale readings).
+  - Overscroll exclusion: ignore readings while at the very top/
+    bottom of the page scroll range, since iOS rubber-band overscroll
+    also shifts offsetTop with zero keyboard involvement.
 
-  A prior attempt at a visualViewport-based fix (see project handoff)
-  applied a transform unconditionally on every resize/scroll event,
-  which caused drift on completely ordinary scrolling unrelated to
-  the form. The difference here: only touch .mf-topbar when
-  visualViewport.offsetTop is actually nonzero (confirmed via the
-  live measurement above), and always correct back to exactly that
-  offset — never guess, never apply on scroll events that aren't
-  actually desynced.
+  Requirement: zero visible motion, under any interaction, full stop
+  — not "smoothed," not "occasional single nudge on popup close."
+  So corrections are applied every time they're needed, on every
+  relevant event, but always while the header is visibility:hidden
+  for two animation frames, so the movement itself is never on
+  screen — only the corrected end state is ever visible.
 */
 (function () {
   var topbar = document.querySelector('.mf-topbar');
   if (!topbar || !window.visualViewport) return;
 
-  // Smooth out the correction itself: once we've decided to correct
-  // an offset (see the guards below), ease into/out of it over a
-  // short duration instead of snapping frame-by-frame. This absorbs
-  // small residual fluctuations as iOS finishes settling, so the
-  // correction reads as one gentle nudge rather than a jitter.
-  topbar.style.transition = 'transform .12s ease-out';
-
   var ticking = false;
+  var correcting = false;
+
+  function applyCorrection(offset) {
+    if (correcting) return;
+    correcting = true;
+    topbar.style.visibility = 'hidden';
+    topbar.style.transform = 'translateY(' + offset + 'px)';
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () {
+        topbar.style.visibility = '';
+        correcting = false;
+      });
+    });
+  }
+
+  function clearCorrection() {
+    if (correcting) return;
+    if (topbar.style.transform) {
+      topbar.style.visibility = 'hidden';
+      topbar.style.transform = '';
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () {
+          topbar.style.visibility = '';
+        });
+      });
+    }
+  }
 
   function syncTopbarToViewport() {
     ticking = false;
     var offset = window.visualViewport.offsetTop;
 
-    // iOS rubber-band overscroll (bouncing past the top/bottom edge of
-    // the page) also shifts visualViewport.offsetTop, even with zero
-    // keyboard interaction — that's a false positive for this fix.
-    // Only apply the correction when we're NOT at the page's scroll
-    // extremes, since real overscroll only happens right at those
-    // edges and the keyboard-desync case doesn't care about scroll
-    // position at all.
     var atTop = window.scrollY <= 0;
     var atBottom = window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 1;
-
     var maxSensible = topbar.offsetHeight || 100;
+
     if (offset && offset > 0 && offset <= maxSensible && !atTop && !atBottom) {
-      topbar.style.transform = 'translateY(' + offset + 'px)';
+      applyCorrection(offset);
     } else {
-      topbar.style.transform = '';
+      clearCorrection();
     }
   }
 
