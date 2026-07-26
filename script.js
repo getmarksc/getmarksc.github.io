@@ -98,15 +98,19 @@ function closeQuoteForm() {
   tapping the phone link, reopening the quote form — also corrects
   the header, not just scrolling to an extreme. That means the broken
   state isn't created by closing the modal; it's created earlier,
-  while the keyboard is up/dismissing during form-filling, and simply
-  stays invisible the whole time because the modal (z-index 999) is
-  covering the header. Close was never the trigger — it was just the
-  first moment the already-wrong state became visible. So the real
-  fix is to force the recompute during submit, right after blur()
-  dismisses the keyboard, while it's still hidden — not to react
-  after the fact once it's already on screen. The call in
-  closeQuoteForm() above is kept only as a cheap secondary safety net
-  in case something is still unsettled by the time of close.
+  while the keyboard is up/dismissing, and simply stays invisible the
+  whole time because the modal (z-index 999) is covering the header.
+
+  SECOND on-device observation, which is why this is a general
+  focusout listener rather than something only wired into the submit
+  handler: the header still broke even when the form was never
+  submitted at all — tapping into a field (keyboard opens) and then
+  tapping the X to close directly was enough to trigger it. That
+  path never runs the submit handler, so a submit-only fix can't
+  cover it. What both paths share is a field losing focus, so that's
+  the actual event to key off of, regardless of what causes it or
+  where the user goes next. The call in closeQuoteForm() below is
+  kept only as a cheap, harmless extra safety net.
 
   This forces a synchronous reflow on .mf-topbar specifically (rather
   than nudging window.scrollTo, which may not do anything meaningful
@@ -122,6 +126,19 @@ function qfForceStickyReflow() {
   void topbar.offsetHeight; // reading this forces a synchronous reflow
   topbar.style.display = prevDisplay;
 }
+// General fix: any time a field inside the quote form loses focus,
+// for ANY reason (submitting, tapping the X, tapping the overlay
+// backdrop, tabbing to the next field), schedule the reflow once the
+// keyboard-dismiss animation has had room to actually finish. Bound
+// once here, on the overlay itself (which persists across every
+// open/close), rather than re-bound per open like the form's own
+// submit listener — focusout bubbles, so this catches every field
+// without needing a listener on each one individually.
+document.getElementById('qf-overlay').addEventListener('focusout', function (e) {
+  if (e.target && e.target.classList && e.target.classList.contains('qf-input')) {
+    setTimeout(qfForceStickyReflow, 350);
+  }
+});
 function qfCloseOnOverlay(e) {
   if (e.target === document.getElementById('qf-overlay')) closeQuoteForm();
 }
@@ -136,12 +153,6 @@ function qfBindForm() {
     if (document.activeElement && typeof document.activeElement.blur === 'function') {
       document.activeElement.blur();
     }
-    // PRIMARY fix, moved here per on-device observation: force the
-    // sticky recompute shortly after the keyboard starts dismissing,
-    // while the modal still covers the header — see
-    // qfForceStickyReflow() above for the full reasoning. 350ms gives
-    // the keyboard-dismiss animation room to actually finish first.
-    setTimeout(qfForceStickyReflow, 350);
     var first = document.getElementById('qf-first');
     var phone = document.getElementById('qf-phone');
     var email = document.getElementById('qf-email');
