@@ -28,16 +28,15 @@ var qfOriginalBodyHTML = null;
   fully resolve things, it can be isolated and removed without
   affecting the parts already confirmed working.
 
-  IMPORTANT SIDE EFFECT (relevant to the guard below): while body is
-  position:fixed, it's removed from document flow, so
-  document.documentElement.scrollHeight collapses to roughly
-  window.innerHeight and window.scrollY is pinned at 0. On unlock,
-  qfUnlockScroll() restores window.scrollY via scrollTo() to wherever
-  the page was when the modal opened — which for this site's two
-  entry points (hero CTA, contact-section CTA) is usually right at
-  the top or right at the bottom of the page. That restored scrollY
-  feeds directly into the atTop/atBottom check in the visualViewport
-  handler below, so see the qfGraceUntil note there.
+  SIDE EFFECT worth knowing about: while body is position:fixed, it's
+  removed from document flow, so document.documentElement.scrollHeight
+  collapses to roughly window.innerHeight while the modal is open. On
+  unlock, qfUnlockScroll() restores window.scrollY via scrollTo() to
+  wherever the page was when the modal opened. This isn't the main
+  driver of the header issue (see qfKeyboardActiveUntil below for
+  what on-device tracing actually showed), but it's real behavior of
+  this function worth knowing if scrollY/scrollHeight ever look odd
+  in a future debugging session.
 */
 var qfScrollLockY = 0;
 function qfLockScroll() {
@@ -58,32 +57,31 @@ function qfUnlockScroll() {
 }
 
 /*
-  Grace window for the visualViewport guard, set on modal close.
+  Keyboard-active window, tracked so the visualViewport correction
+  below only ever runs while a keyboard could plausibly be involved.
 
-  Why this exists: closeQuoteForm() -> qfUnlockScroll() calls
-  window.scrollTo() synchronously, which can land window.scrollY at
-  0 (or near document max) right as the keyboard-dismiss
-  visualViewport events are still firing post-submit. The
-  atTop/atBottom exclusion in syncTopbarToViewport() below exists to
-  filter out iOS rubber-band overscroll — but rubber-band overscroll
-  can only be produced by an actual touch drag past the edge, never
-  by a programmatic scrollTo(). So it's safe to trust the offset
-  (ceiling check only) for a short window right after a
-  program-initiated close, without weakening the guard during normal
-  scrolling elsewhere.
+  CONFIRMED via on-device console trace (not a guess): the ceiling +
+  overscroll guard alone isn't enough to tell "keyboard just
+  dismissed" apart from "Safari's toolbar is hiding/showing during
+  ordinary scroll" — both produce a small, valid-looking, sub-100px
+  visualViewport.offsetTop reading. A captured trace showed offset
+  sitting at a steady ~42px for the full duration of an ordinary fast
+  scroll fling (scrollY climbing ~750px in ~350ms, innerHeight
+  oscillating ~775<->815 — the classic Safari address-bar footprint,
+  not a keyboard, which would drop innerHeight by 300+px), with the
+  header actively being pushed down by that amount the whole time.
+  iOS already positions position:fixed elements correctly through
+  toolbar animations on its own — this correction was stepping on
+  top of behavior that didn't need help, which is what was visible
+  as "movement" on ordinary scrolling, not just after the popup.
 
-  This is a hypothesis for the residual cosmetic bounce described in
-  the project handoff doc, not yet confirmed on-device. Verify with
-  the same live Web Inspector method that found the original root
-  cause: watch window.scrollY and visualViewport.offsetTop at the
-  moment of close and see whether atTop/atBottom is flipping true
-  while offset is still nonzero. If the bounce persists even with
-  this grace window, that points toward the doc's own recommended
-  next step (restructuring .mf-topbar to position:sticky) rather
-  than this interaction.
+  Fix: only let the correction logic act while the quote form has
+  been opened and hasn't been closed for more than QF_KEYBOARD_GRACE_MS.
+  Everywhere else — all ordinary scrolling and toolbar transitions
+  across the rest of the site — the header is left completely alone.
 */
-var qfGraceUntil = 0;
-var QF_GRACE_MS = 500; // covers iOS keyboard-dismiss animation + settle time
+var qfKeyboardActiveUntil = 0;
+var QF_KEYBOARD_GRACE_MS = 1000; // window after close to catch a lingering desync
 
 function openQuoteForm() {
   var body = document.getElementById('qf-body');
@@ -95,11 +93,12 @@ function openQuoteForm() {
   document.getElementById('qf-overlay').classList.add('open');
   qfLockScroll();
   qfBindForm();
+  qfKeyboardActiveUntil = Infinity; // stays open the whole time the modal is up
 }
 function closeQuoteForm() {
   document.getElementById('qf-overlay').classList.remove('open');
   qfUnlockScroll();
-  qfGraceUntil = Date.now() + QF_GRACE_MS;
+  qfKeyboardActiveUntil = Date.now() + QF_KEYBOARD_GRACE_MS; // short tail to catch a lingering desync, then fully off
 }
 function qfCloseOnOverlay(e) {
   if (e.target === document.getElementById('qf-overlay')) closeQuoteForm();
@@ -158,13 +157,19 @@ function qfShowThanks() {
 
 /*
   iOS Safari visualViewport / fixed-header desync — CONFIRMED via live
-  device inspection. Ceiling + overscroll guard, proven in testing to
-  fix partial-covering and edge-of-page bounce, kept unchanged from
-  the currently-deployed version. This is the safety net for any
-  residual desync not addressed by the scroll-lock above.
+  device inspection (original root cause), and the "when does this
+  correction actually fire" behavior CONFIRMED via a separate on-device
+  console trace (see qfKeyboardActiveUntil above for what that trace
+  showed and why the gate below exists).
 
-  atTop/atBottom now also respect qfGraceUntil (set in
-  closeQuoteForm() above) — see the comment on qfGraceUntil for why.
+  Ceiling + overscroll guard are kept as a second layer of defense,
+  but the real gate is qfKeyboardActiveUntil: this function does
+  nothing at all — never touches the header's transform — unless the
+  quote form is currently open or was closed within the last
+  QF_KEYBOARD_GRACE_MS. Outside that window, every scroll/resize event
+  on the page (ordinary scrolling, Safari's toolbar hiding/showing,
+  anything) is ignored, and iOS's own correct native handling of
+  position:fixed is left alone.
 */
 (function () {
   var topbar = document.querySelector('.mf-topbar');
@@ -176,11 +181,19 @@ function qfShowThanks() {
 
   function syncTopbarToViewport() {
     ticking = false;
-    var offset = window.visualViewport.offsetTop;
 
-    var inGrace = Date.now() < qfGraceUntil;
-    var atTop = !inGrace && window.scrollY <= 0;
-    var atBottom = !inGrace && (window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 1);
+    if (Date.now() > qfKeyboardActiveUntil) {
+      // No recent keyboard interaction with the quote form — leave the
+      // header alone. This is the branch that was missing before: it's
+      // what stops ordinary scrolling/toolbar transitions from ever
+      // reaching the correction logic below.
+      topbar.style.transform = '';
+      return;
+    }
+
+    var offset = window.visualViewport.offsetTop;
+    var atTop = window.scrollY <= 0;
+    var atBottom = window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 1;
 
     var maxSensible = topbar.offsetHeight || 100;
     if (offset && offset > 0 && offset <= maxSensible && !atTop && !atBottom) {
