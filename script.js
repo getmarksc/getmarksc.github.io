@@ -19,7 +19,6 @@ function openQuoteForm() {
 }
 function closeQuoteForm() {
   document.getElementById('qf-overlay').classList.remove('open');
-  document.dispatchEvent(new Event('qf:closed'));
 }
 function qfCloseOnOverlay(e) {
   if (e.target === document.getElementById('qf-overlay')) closeQuoteForm();
@@ -83,48 +82,65 @@ function qfShowThanks() {
   At the exact moment the header appeared visibly shifted on a real
   iPhone, window.visualViewport.offsetTop measured ~31px while
   .mf-topbar's own computed styles (position, top, box model) and its
-  own compositor layer were both entirely correct — this is iOS's
-  visual viewport briefly sitting offset from the layout viewport
-  right after the on-screen keyboard dismisses.
+  own compositor layer (Layers tab: single layer, correct 430x85
+  bounds, no stray child layers) were BOTH entirely correct. The
+  ancestor chain (.mobile-site) had no transform and wasn't itself a
+  composited layer. So this is not a CSS bug, not a stale paint layer,
+  and not a rogue transform anywhere in the DOM — it's iOS Safari's
+  visual viewport genuinely sitting offset from the layout viewport
+  for a window of time after the on-screen keyboard dismisses
+  (post form-submit blur), before scrolling forces it to reconcile.
 
-  Per explicit preference: zero visible motion is the priority, even
-  if that means the correction occasionally doesn't fully catch a
-  rare case (which would then just fall back to the original
-  behavior of self-correcting on the next scroll, same as before any
-  of this code existed). So: no live tracking, no transition, no
-  motion the user can see. Instead, correct once, silently, at the
-  moment the modal closes — before the user has resumed scrolling —
-  using visibility:hidden to make the adjustment happen off-screen
-  from the user's perspective, then reveal already-correct.
+  A prior attempt at a visualViewport-based fix (see project handoff)
+  applied a transform unconditionally on every resize/scroll event,
+  which caused drift on completely ordinary scrolling unrelated to
+  the form. The difference here: only touch .mf-topbar when
+  visualViewport.offsetTop is actually nonzero (confirmed via the
+  live measurement above), and always correct back to exactly that
+  offset — never guess, never apply on scroll events that aren't
+  actually desynced.
 */
 (function () {
   var topbar = document.querySelector('.mf-topbar');
   if (!topbar || !window.visualViewport) return;
 
-  function silentlyCorrectTopbar() {
-    // Give iOS a moment to finish its own keyboard-dismiss viewport
-    // settling before we even check — most of the time this alone
-    // means offsetTop is already back to 0 and we do nothing.
-    setTimeout(function () {
-      var offset = window.visualViewport.offsetTop;
-      var maxSensible = topbar.offsetHeight || 100;
-      if (!offset || offset <= 0 || offset > maxSensible) return;
+  // Smooth out the correction itself: once we've decided to correct
+  // an offset (see the guards below), ease into/out of it over a
+  // short duration instead of snapping frame-by-frame. This absorbs
+  // small residual fluctuations as iOS finishes settling, so the
+  // correction reads as one gentle nudge rather than a jitter.
+  topbar.style.transition = 'transform .12s ease-out';
 
-      // Apply the correction while invisible, so the user never sees
-      // the movement itself — only the already-corrected end state.
-      topbar.style.visibility = 'hidden';
+  var ticking = false;
+
+  function syncTopbarToViewport() {
+    ticking = false;
+    var offset = window.visualViewport.offsetTop;
+
+    // iOS rubber-band overscroll (bouncing past the top/bottom edge of
+    // the page) also shifts visualViewport.offsetTop, even with zero
+    // keyboard interaction — that's a false positive for this fix.
+    // Only apply the correction when we're NOT at the page's scroll
+    // extremes, since real overscroll only happens right at those
+    // edges and the keyboard-desync case doesn't care about scroll
+    // position at all.
+    var atTop = window.scrollY <= 0;
+    var atBottom = window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 1;
+
+    var maxSensible = topbar.offsetHeight || 100;
+    if (offset && offset > 0 && offset <= maxSensible && !atTop && !atBottom) {
       topbar.style.transform = 'translateY(' + offset + 'px)';
-      requestAnimationFrame(function () {
-        requestAnimationFrame(function () {
-          topbar.style.visibility = '';
-        });
-      });
-    }, 350);
+    } else {
+      topbar.style.transform = '';
+    }
   }
 
-  // Only check once, right after the modal closes — not continuously
-  // while scrolling. If the offset is still present after 350ms it
-  // gets corrected invisibly; otherwise nothing happens and no motion
-  // is ever visible.
-  document.addEventListener('qf:closed', silentlyCorrectTopbar);
+  function requestSync() {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(syncTopbarToViewport);
+  }
+
+  window.visualViewport.addEventListener('resize', requestSync);
+  window.visualViewport.addEventListener('scroll', requestSync);
 })();
