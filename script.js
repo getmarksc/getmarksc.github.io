@@ -27,6 +27,17 @@ var qfOriginalBodyHTML = null;
   rather than as a replacement for it — so if this alone doesn't
   fully resolve things, it can be isolated and removed without
   affecting the parts already confirmed working.
+
+  IMPORTANT SIDE EFFECT (relevant to the guard below): while body is
+  position:fixed, it's removed from document flow, so
+  document.documentElement.scrollHeight collapses to roughly
+  window.innerHeight and window.scrollY is pinned at 0. On unlock,
+  qfUnlockScroll() restores window.scrollY via scrollTo() to wherever
+  the page was when the modal opened — which for this site's two
+  entry points (hero CTA, contact-section CTA) is usually right at
+  the top or right at the bottom of the page. That restored scrollY
+  feeds directly into the atTop/atBottom check in the visualViewport
+  handler below, so see the qfGraceUntil note there.
 */
 var qfScrollLockY = 0;
 function qfLockScroll() {
@@ -46,6 +57,34 @@ function qfUnlockScroll() {
   window.scrollTo(0, qfScrollLockY);
 }
 
+/*
+  Grace window for the visualViewport guard, set on modal close.
+
+  Why this exists: closeQuoteForm() -> qfUnlockScroll() calls
+  window.scrollTo() synchronously, which can land window.scrollY at
+  0 (or near document max) right as the keyboard-dismiss
+  visualViewport events are still firing post-submit. The
+  atTop/atBottom exclusion in syncTopbarToViewport() below exists to
+  filter out iOS rubber-band overscroll — but rubber-band overscroll
+  can only be produced by an actual touch drag past the edge, never
+  by a programmatic scrollTo(). So it's safe to trust the offset
+  (ceiling check only) for a short window right after a
+  program-initiated close, without weakening the guard during normal
+  scrolling elsewhere.
+
+  This is a hypothesis for the residual cosmetic bounce described in
+  the project handoff doc, not yet confirmed on-device. Verify with
+  the same live Web Inspector method that found the original root
+  cause: watch window.scrollY and visualViewport.offsetTop at the
+  moment of close and see whether atTop/atBottom is flipping true
+  while offset is still nonzero. If the bounce persists even with
+  this grace window, that points toward the doc's own recommended
+  next step (restructuring .mf-topbar to position:sticky) rather
+  than this interaction.
+*/
+var qfGraceUntil = 0;
+var QF_GRACE_MS = 500; // covers iOS keyboard-dismiss animation + settle time
+
 function openQuoteForm() {
   var body = document.getElementById('qf-body');
   if (qfOriginalBodyHTML === null) {
@@ -60,6 +99,7 @@ function openQuoteForm() {
 function closeQuoteForm() {
   document.getElementById('qf-overlay').classList.remove('open');
   qfUnlockScroll();
+  qfGraceUntil = Date.now() + QF_GRACE_MS;
 }
 function qfCloseOnOverlay(e) {
   if (e.target === document.getElementById('qf-overlay')) closeQuoteForm();
@@ -122,6 +162,9 @@ function qfShowThanks() {
   fix partial-covering and edge-of-page bounce, kept unchanged from
   the currently-deployed version. This is the safety net for any
   residual desync not addressed by the scroll-lock above.
+
+  atTop/atBottom now also respect qfGraceUntil (set in
+  closeQuoteForm() above) — see the comment on qfGraceUntil for why.
 */
 (function () {
   var topbar = document.querySelector('.mf-topbar');
@@ -135,8 +178,9 @@ function qfShowThanks() {
     ticking = false;
     var offset = window.visualViewport.offsetTop;
 
-    var atTop = window.scrollY <= 0;
-    var atBottom = window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 1;
+    var inGrace = Date.now() < qfGraceUntil;
+    var atTop = !inGrace && window.scrollY <= 0;
+    var atBottom = !inGrace && (window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 1);
 
     var maxSensible = topbar.offsetHeight || 100;
     if (offset && offset > 0 && offset <= maxSensible && !atTop && !atBottom) {
