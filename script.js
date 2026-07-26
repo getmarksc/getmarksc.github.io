@@ -71,64 +71,48 @@ function openQuoteForm() {
 function closeQuoteForm() {
   document.getElementById('qf-overlay').classList.remove('open');
   qfUnlockScroll();
-  qfForceStickyReflow(); // secondary safety net — see rationale below; the
-  // primary fix now fires earlier, at submit-time, while still hidden.
+  qfForceViewportReconcile(); // secondary safety net; the focusout
+  // listener below is the primary fix and fires earlier than this.
 }
 
 /*
-  Forces iOS to fully recompute position:sticky layout for
-  .mf-topbar, on demand, instead of waiting for the user to
-  accidentally hit a scroll extreme (which is what was making it
-  self-correct before).
+  Forces iOS to fully reconcile its viewport bookkeeping on demand,
+  instead of waiting for the user to accidentally trigger it (by
+  scrolling to a page extreme, or by tapping the tel: link and
+  bringing up iOS's own native "Call this number?" sheet — both
+  confirmed on-device to fix the header, every time).
 
-  Why this exists, and why it moved: confirmed, by elimination on a
-  real device, that neither the JS transform correction (removed
-  entirely) nor the scroll-lock body-position toggle (tested by
-  disabling it — no change) was the cause of .mf-topbar rendering
-  shifted/clipped after closing the form and doing a small scroll.
-  The one thing unique to that sequence and absent from ordinary
-  scrolling elsewhere is the on-screen keyboard opening and
-  dismissing — matching the project's original confirmed root cause
-  (iOS's visual viewport briefly out of sync with the layout viewport
-  after keyboard dismissal), now apparently affecting sticky's "am I
-  stuck yet" calculation the same way it affected fixed positioning
-  originally.
+  Why THIS specific technique: an earlier attempt forced a reflow by
+  toggling display:none/'' on .mf-topbar itself — confirmed on-device,
+  across several different trigger timings, to do nothing at all.
+  That makes sense in hindsight: a display toggle only recalculates
+  local page layout. It doesn't touch whatever viewport-level state
+  iOS is actually getting confused about, which real scrolling and
+  the native call sheet both clearly do reach. window.scrollTo() is a
+  genuine scroll-position change, not just a local layout op, so it's
+  a plausible way to trigger the same kind of reconciliation as an
+  actual scroll — worth testing directly, since it hasn't actually
+  been tried at this trigger timing before (an earlier version of
+  this function used scrollTo, but only ran at modal-close time,
+  before the general focusout-based timing below existed).
 
-  On-device observation (not a guess): ANY subsequent interaction —
-  tapping the phone link, reopening the quote form — also corrects
-  the header, not just scrolling to an extreme. That means the broken
-  state isn't created by closing the modal; it's created earlier,
-  while the keyboard is up/dismissing, and simply stays invisible the
-  whole time because the modal (z-index 999) is covering the header.
-
-  SECOND on-device observation, which is why this is a general
-  focusout listener rather than something only wired into the submit
-  handler: the header still broke even when the form was never
-  submitted at all — tapping into a field (keyboard opens) and then
-  tapping the X to close directly was enough to trigger it. That
-  path never runs the submit handler, so a submit-only fix can't
-  cover it. What both paths share is a field losing focus, so that's
-  the actual event to key off of, regardless of what causes it or
-  where the user goes next. The call in closeQuoteForm() below is
-  kept only as a cheap, harmless extra safety net.
-
-  This forces a synchronous reflow on .mf-topbar specifically (rather
-  than nudging window.scrollTo, which may not do anything meaningful
-  while the scroll-lock has body pinned) — so it works regardless of
-  scroll-lock state. This is a hypothesis to verify on-device, not a
-  guaranteed fix.
+  Still a hypothesis, not a guarantee. If this doesn't work either,
+  that's meaningful: it would mean the fix requires something at the
+  OS/native level that plain page JS structurally cannot reach on
+  iOS Safari, and the realistic options become either accepting this
+  as a minor, hard-to-eliminate rendering quirk, or reporting it to
+  WebKit as a browser bug rather than continuing to patch around it.
 */
-function qfForceStickyReflow() {
-  var topbar = document.querySelector('.mf-topbar');
-  if (!topbar) return;
-  var prevDisplay = topbar.style.display;
-  topbar.style.display = 'none';
-  void topbar.offsetHeight; // reading this forces a synchronous reflow
-  topbar.style.display = prevDisplay;
+function qfForceViewportReconcile() {
+  var y = window.scrollY;
+  window.scrollTo(0, y + 1);
+  requestAnimationFrame(function () {
+    window.scrollTo(0, y);
+  });
 }
 // General fix: any time a field inside the quote form loses focus,
 // for ANY reason (submitting, tapping the X, tapping the overlay
-// backdrop, tabbing to the next field), schedule the reflow once the
+// backdrop, tabbing to the next field), schedule this once the
 // keyboard-dismiss animation has had room to actually finish. Bound
 // once here, on the overlay itself (which persists across every
 // open/close), rather than re-bound per open like the form's own
@@ -136,7 +120,7 @@ function qfForceStickyReflow() {
 // without needing a listener on each one individually.
 document.getElementById('qf-overlay').addEventListener('focusout', function (e) {
   if (e.target && e.target.classList && e.target.classList.contains('qf-input')) {
-    setTimeout(qfForceStickyReflow, 350);
+    setTimeout(qfForceViewportReconcile, 350);
   }
 });
 function qfCloseOnOverlay(e) {
