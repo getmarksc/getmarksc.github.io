@@ -104,6 +104,13 @@ function qfShowThanks() {
   var topbar = document.querySelector('.mf-topbar');
   if (!topbar || !window.visualViewport) return;
 
+  // Smooth out the correction itself: once we've decided to correct
+  // an offset (see the guards below), ease into/out of it over a
+  // short duration instead of snapping frame-by-frame. This absorbs
+  // small residual fluctuations as iOS finishes settling, so the
+  // correction reads as one gentle nudge rather than a jitter.
+  topbar.style.transition = 'transform .12s ease-out';
+
   var ticking = false;
 
   function syncTopbarToViewport() {
