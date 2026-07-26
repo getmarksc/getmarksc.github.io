@@ -104,15 +104,30 @@ function qfShowThanks() {
   var topbar = document.querySelector('.mf-topbar');
   if (!topbar || !window.visualViewport) return;
 
+  var ticking = false;
+
   function syncTopbarToViewport() {
+    ticking = false;
     var offset = window.visualViewport.offsetTop;
-    if (offset && offset !== 0) {
+    // Sanity ceiling: the desync this compensates for is only ever a
+    // few tens of px (keyboard-dismiss artifact). If it's ever larger
+    // than the topbar's own height, treat it as a stale/bogus reading
+    // rather than trust it — never let this push the header further
+    // than it could legitimately need to go.
+    var maxSensible = topbar.offsetHeight || 100;
+    if (offset && offset > 0 && offset <= maxSensible) {
       topbar.style.transform = 'translateY(' + offset + 'px)';
     } else {
       topbar.style.transform = '';
     }
   }
 
-  window.visualViewport.addEventListener('resize', syncTopbarToViewport);
-  window.visualViewport.addEventListener('scroll', syncTopbarToViewport);
+  function requestSync() {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(syncTopbarToViewport);
+  }
+
+  window.visualViewport.addEventListener('resize', requestSync);
+  window.visualViewport.addEventListener('scroll', requestSync);
 })();
