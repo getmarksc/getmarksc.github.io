@@ -109,13 +109,19 @@ function qfShowThanks() {
   function syncTopbarToViewport() {
     ticking = false;
     var offset = window.visualViewport.offsetTop;
-    // Sanity ceiling: the desync this compensates for is only ever a
-    // few tens of px (keyboard-dismiss artifact). If it's ever larger
-    // than the topbar's own height, treat it as a stale/bogus reading
-    // rather than trust it — never let this push the header further
-    // than it could legitimately need to go.
+
+    // iOS rubber-band overscroll (bouncing past the top/bottom edge of
+    // the page) also shifts visualViewport.offsetTop, even with zero
+    // keyboard interaction — that's a false positive for this fix.
+    // Only apply the correction when we're NOT at the page's scroll
+    // extremes, since real overscroll only happens right at those
+    // edges and the keyboard-desync case doesn't care about scroll
+    // position at all.
+    var atTop = window.scrollY <= 0;
+    var atBottom = window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 1;
+
     var maxSensible = topbar.offsetHeight || 100;
-    if (offset && offset > 0 && offset <= maxSensible) {
+    if (offset && offset > 0 && offset <= maxSensible && !atTop && !atBottom) {
       topbar.style.transform = 'translateY(' + offset + 'px)';
     } else {
       topbar.style.transform = '';
