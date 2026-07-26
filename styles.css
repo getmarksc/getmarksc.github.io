@@ -205,11 +205,48 @@
   .mobile-site{display:block;background:var(--cream);}
 }
 
+/*
+  CHANGED: position:fixed -> position:sticky.
+
+  Why: real-device tracing (console logs + a screenshot) confirmed
+  the header movement during ordinary scrolling was NOT caused by
+  this project's JS — the visualViewport correction script was
+  provably inactive (transform stayed empty) the whole time this was
+  happening. What was actually visible instead was position:fixed's
+  own known iOS Safari behavior: a fixed layer can visually detach
+  and lag behind during fast/momentum scrolling, independent of any
+  page JS, because it's pinned to a separate compositor layer tied to
+  the visual viewport rather than to normal document layout.
+
+  position:sticky is positioned through normal layout/scroll logic
+  instead of that separate compositor mechanism, so it isn't subject
+  to the same detach-during-scroll behavior. Since .mf-topbar is
+  already the very first element in the mobile layout, no extra
+  containing block is needed — it sticks to top:0 as soon as you
+  scroll past its own (very first) position, which for this element
+  is immediately.
+
+  NOTE: because sticky occupies real space in the document flow
+  (unlike fixed, which doesn't), the margin-top compensation that
+  used to live on .mf-hero to make room for the fixed topbar has been
+  removed below — otherwise there'd be an unwanted gap between the
+  topbar and the hero now that the topbar reserves its own space
+  naturally.
+
+  The visualViewport correction JS in script.js has been left
+  untouched for this round — it's still gated to only run near an
+  actual quote-form open/close, so it stays harmless/dormant here,
+  and keeping it unchanged keeps this test isolated to the one CSS
+  change. Confirm on-device before removing it in a later cleanup:
+  (1) fast scrolling no longer shows the header detach/lag, and
+  (2) the original bug (header partially covering content after
+  popup close) has not come back via a different mechanism.
+*/
 .mf-topbar{
   display:flex;align-items:center;justify-content:space-between;
   padding:.85rem 5vw;background:var(--cream);
   border-bottom:1px solid var(--hairline);
-  position:fixed;top:0;left:0;right:0;z-index:50;
+  position:sticky;top:0;left:0;right:0;z-index:50;
   box-shadow:0 2px 10px rgba(16,31,56,0.06);
 }
 .mf-logo{display:flex;flex-direction:column;line-height:1.1;}
@@ -224,7 +261,9 @@
 .mf-hero{
   background:var(--navy);color:var(--cream);
   padding:2.6rem 6vw 2.4rem;text-align:center;
-  margin-top:3.6rem;
+  /* margin-top:3.6rem removed — .mf-topbar is now position:sticky and
+     occupies its own real space in the flow, so this compensation is
+     no longer needed and would otherwise add an unwanted extra gap. */
 }
 .mf-eyebrow{
   font-size:.65rem;font-weight:600;letter-spacing:.18em;text-transform:uppercase;
