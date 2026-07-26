@@ -19,6 +19,7 @@ function openQuoteForm() {
 }
 function closeQuoteForm() {
   document.getElementById('qf-overlay').classList.remove('open');
+  qfKickTopbarLayer();
 }
 function qfCloseOnOverlay(e) {
   if (e.target === document.getElementById('qf-overlay')) closeQuoteForm();
@@ -61,34 +62,10 @@ function qfBindForm() {
       headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
       body: JSON.stringify(payload)
     })
-      .then(function () { qfShowThanksDeferred(); })
-      .catch(function () { qfShowThanksDeferred(); });
+      .then(function () { qfShowThanks(); })
+      .catch(function () { qfShowThanks(); });
   });
 }
-
-/*
-  iOS Safari note:
-  qfShowThanks() replaces #qf-body's innerHTML, forcing a reflow of a
-  subtree that sits inside a fixed-position overlay. If that reflow
-  happens while iOS is still mid-way through dismissing the on-screen
-  keyboard (which the blur() call above kicks off, but does not make
-  synchronous/instant), iOS Safari can paint position:fixed elements
-  (.mf-topbar) onto a stale compositor layer until the next scroll
-  forces it to reconcile. That matches the observed symptom: header
-  shifts, then self-corrects after further scrolling.
-
-  Fix: don't do the innerHTML swap in the same tick as the fetch
-  resolution (which itself follows close on the heels of blur()).
-  Wait one animation frame (paint has happened, layout settled) plus
-  a short delay so iOS's keyboard-dismiss/viewport-resize animation
-  has time to actually finish before we force another reflow.
-*/
-function qfShowThanksDeferred() {
-  requestAnimationFrame(function () {
-    setTimeout(qfShowThanks, 120);
-  });
-}
-
 function qfShowThanks() {
   document.getElementById('qf-body').innerHTML =
     '<div class="qf-thanks">' +
@@ -97,4 +74,35 @@ function qfShowThanks() {
       '<p class="qf-sub">Thank you for reaching out. Mark will review your request and get back to you soon &mdash; usually within a day.</p>' +
       '<button class="qf-submit" type="button" onclick="closeQuoteForm()">Close</button>' +
     '</div>';
+}
+
+/*
+  iOS Safari compositor-layer bug workaround.
+
+  Confirmed via live Web Inspector (Computed panel) on the real device:
+  .mf-topbar's actual computed styles (position: fixed, top: 0, box
+  model, etc.) stay 100% correct even at the exact moment the header
+  is visibly displaced on screen. That rules out a layout/CSS bug —
+  this is iOS Safari painting a stale GPU-composited layer for the
+  fixed header after the modal's own layer (backdrop-filter: blur()
+  triggers layer promotion) is torn down. The DOM is right; the paint
+  is wrong. Confirmed self-correcting on next scroll, because scrolling
+  forces iOS to recomposite - matches this exactly.
+
+  Fix: force Safari to tear down and repaint .mf-topbar's compositor
+  layer immediately after the modal closes, instead of waiting for a
+  user scroll to do it for us. Toggling a transform that promotes/
+  demotes the layer (translateZ(0) on, then off next frame) is the
+  standard, minimal way to force that repaint without touching
+  scroll position, body, or overflow — none of which caused this.
+*/
+function qfKickTopbarLayer() {
+  var topbar = document.querySelector('.mf-topbar');
+  if (!topbar) return;
+  topbar.style.transform = 'translateZ(0)';
+  requestAnimationFrame(function () {
+    requestAnimationFrame(function () {
+      topbar.style.transform = '';
+    });
+  });
 }
