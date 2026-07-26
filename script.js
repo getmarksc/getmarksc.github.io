@@ -11,50 +11,21 @@ var qfOriginalBodyHTML = null;
 /*
   Background scroll-lock while modal is open.
 
-  Rationale: while the popup is open, the page behind it is still
-  scrollable (confirmed by observation), alongside the modal's own
-  internal overflow-y:auto scroll region. Two independent active
-  scroll contexts at once, combined with the keyboard opening/closing
-  as the user fills the form, is a plausible contributor to iOS's
-  visualViewport desync behavior addressed elsewhere in this file.
-
-  Note: a scroll-lock attempt was tried previously (see project
-  handoff) using position:fixed + top:-Npx on <body>, and held up for
-  one test sequence before breaking on a slightly different one. This
-  implementation is deliberately identical in technique (the standard
-  approach) but is being reintroduced as an addition alongside the
-  separately-proven visualViewport ceiling/overscroll guard below,
-  rather than as a replacement for it — so if this alone doesn't
-  fully resolve things, it can be isolated and removed without
-  affecting the parts already confirmed working.
-
-  SIDE EFFECT worth knowing about: while body is position:fixed, it's
-  removed from document flow, so document.documentElement.scrollHeight
-  collapses to roughly window.innerHeight while the modal is open. On
-  unlock, qfUnlockScroll() restores window.scrollY via scrollTo() to
-  wherever the page was when the modal opened. This turned out not to
-  be the driver of the header issue — that was .mf-topbar's own
-  position:fixed behavior and a since-removed JS correction for it
-  (see styles.css and git history for that story) — but it's real
-  behavior of this function worth knowing if scrollY/scrollHeight
-  ever look odd in a future debugging session.
+  Uses body.qf-lock{overflow:hidden} (see styles.css) rather than
+  toggling position:fixed on body. position:fixed would take <body>
+  out of normal document flow for as long as the modal is open, and
+  .mf-topbar's position:sticky depends on that normal flow for its
+  stuck/unstuck calculation — disrupting it caused the header to
+  visibly shift, especially across an iOS keyboard open/close cycle
+  while a form field was focused. overflow:hidden blocks background
+  scrolling without ever removing body from flow, so the sticky
+  header's containing block is never disrupted.
 */
-var qfScrollLockY = 0;
 function qfLockScroll() {
-  qfScrollLockY = window.scrollY;
-  document.body.style.position = 'fixed';
-  document.body.style.top = '-' + qfScrollLockY + 'px';
-  document.body.style.left = '0';
-  document.body.style.right = '0';
-  document.body.style.width = '100%';
+  document.body.classList.add('qf-lock');
 }
 function qfUnlockScroll() {
-  document.body.style.position = '';
-  document.body.style.top = '';
-  document.body.style.left = '';
-  document.body.style.right = '';
-  document.body.style.width = '';
-  window.scrollTo(0, qfScrollLockY);
+  document.body.classList.remove('qf-lock');
 }
 
 function openQuoteForm() {
@@ -71,46 +42,8 @@ function openQuoteForm() {
 function closeQuoteForm() {
   document.getElementById('qf-overlay').classList.remove('open');
   qfUnlockScroll();
-  qfNudgeScrollForSticky();
 }
 
-/*
-  Forces iOS to fully recompute position:sticky layout right after
-  the modal closes, instead of waiting for the user to accidentally
-  hit a scroll extreme (which is what was making it self-correct).
-
-  Why this exists: confirmed, by elimination on a real device, that
-  neither the JS transform correction (removed entirely) nor the
-  scroll-lock body-position toggle (tested by disabling it — no
-  change) was the cause of .mf-topbar rendering shifted/clipped right
-  after closing the form and doing a small scroll. The one thing left
-  that's unique to this exact sequence and absent from ordinary
-  scrolling elsewhere on the site is the on-screen keyboard opening
-  and dismissing. That matches the project's original confirmed root
-  cause (iOS's visual viewport briefly out of sync with the layout
-  viewport after keyboard dismissal) — that finding was made against
-  position:fixed, but position:sticky's "am I stuck yet" calculation
-  also depends on current viewport state, so it's plausible it isn't
-  immune to the same desync, just surfacing as a different visible
-  symptom (shifted by roughly half its height instead of fully
-  detached) that resolves once a scroll extreme forces recomputation.
-
-  A tiny, effectively invisible scroll nudge is a known way to force
-  iOS to fully recompute fixed/sticky layout on demand, rather than
-  waiting for the user to scroll far enough to trigger it naturally.
-  This is a hypothesis to verify on-device, not a guaranteed fix —
-  if it doesn't fully resolve things, that's still useful information
-  about what this specific quirk does and doesn't respond to.
-*/
-function qfNudgeScrollForSticky() {
-  requestAnimationFrame(function () {
-    requestAnimationFrame(function () {
-      var y = window.scrollY;
-      window.scrollTo(0, y + 1);
-      window.scrollTo(0, y);
-    });
-  });
-}
 function qfCloseOnOverlay(e) {
   if (e.target === document.getElementById('qf-overlay')) closeQuoteForm();
 }
@@ -165,21 +98,3 @@ function qfShowThanks() {
       '<button class="qf-submit" type="button" onclick="closeQuoteForm()">Close</button>' +
     '</div>';
 }
-
-/*
-  REMOVED: the visualViewport transform-correction that used to live
-  here (and the qfKeyboardActiveUntil tracking that gated it) was
-  built specifically to work around position:fixed's old iOS
-  desync bug. .mf-topbar is now position:sticky (see styles.css),
-  which doesn't have that bug — sticky is positioned through normal
-  layout/scroll logic, not the separate viewport-pinned compositor
-  layer fixed uses.
-
-  Confirmed on-device that this old code was actively causing a new
-  symptom rather than fixing anything: for up to a second after
-  closing the quote form, it was still applying a JS transform to the
-  now-sticky header, which visibly dragged it out of place while
-  scrolling in that window and snapped it back once the atBottom
-  guard tripped. Sticky elements don't want or need any transform, so
-  the fix is removal, not another guard.
-*/
