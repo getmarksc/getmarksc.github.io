@@ -65,12 +65,15 @@ function openQuoteForm() {
     body.innerHTML = qfOriginalBodyHTML;
   }
   document.getElementById('qf-overlay').classList.add('open');
-  qfLockScroll();
+  // qfLockScroll(); // TEMPORARILY DISABLED — testing whether toggling
+  // document.body's position between fixed/normal right at open/close
+  // is what's confusing .mf-topbar's position:sticky "stuck" state.
+  // Re-enable once that's confirmed one way or the other.
   qfBindForm();
 }
 function closeQuoteForm() {
   document.getElementById('qf-overlay').classList.remove('open');
-  qfUnlockScroll();
+  // qfUnlockScroll(); // see matching note in openQuoteForm() above.
 }
 function qfCloseOnOverlay(e) {
   if (e.target === document.getElementById('qf-overlay')) closeQuoteForm();
