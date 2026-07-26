@@ -19,7 +19,6 @@ function openQuoteForm() {
 }
 function closeQuoteForm() {
   document.getElementById('qf-overlay').classList.remove('open');
-  qfKickTopbarLayer();
 }
 function qfCloseOnOverlay(e) {
   if (e.target === document.getElementById('qf-overlay')) closeQuoteForm();
@@ -77,32 +76,43 @@ function qfShowThanks() {
 }
 
 /*
-  iOS Safari compositor-layer bug workaround.
+  iOS Safari visualViewport / fixed-header desync — CONFIRMED via live
+  device inspection (Web Inspector, Console tab), not inferred.
 
-  Confirmed via live Web Inspector (Computed panel) on the real device:
-  .mf-topbar's actual computed styles (position: fixed, top: 0, box
-  model, etc.) stay 100% correct even at the exact moment the header
-  is visibly displaced on screen. That rules out a layout/CSS bug —
-  this is iOS Safari painting a stale GPU-composited layer for the
-  fixed header after the modal's own layer (backdrop-filter: blur()
-  triggers layer promotion) is torn down. The DOM is right; the paint
-  is wrong. Confirmed self-correcting on next scroll, because scrolling
-  forces iOS to recomposite - matches this exactly.
+  At the exact moment the header appeared visibly shifted on a real
+  iPhone, window.visualViewport.offsetTop measured ~31px while
+  .mf-topbar's own computed styles (position, top, box model) and its
+  own compositor layer (Layers tab: single layer, correct 430x85
+  bounds, no stray child layers) were BOTH entirely correct. The
+  ancestor chain (.mobile-site) had no transform and wasn't itself a
+  composited layer. So this is not a CSS bug, not a stale paint layer,
+  and not a rogue transform anywhere in the DOM — it's iOS Safari's
+  visual viewport genuinely sitting offset from the layout viewport
+  for a window of time after the on-screen keyboard dismisses
+  (post form-submit blur), before scrolling forces it to reconcile.
 
-  Fix: force Safari to tear down and repaint .mf-topbar's compositor
-  layer immediately after the modal closes, instead of waiting for a
-  user scroll to do it for us. Toggling a transform that promotes/
-  demotes the layer (translateZ(0) on, then off next frame) is the
-  standard, minimal way to force that repaint without touching
-  scroll position, body, or overflow — none of which caused this.
+  A prior attempt at a visualViewport-based fix (see project handoff)
+  applied a transform unconditionally on every resize/scroll event,
+  which caused drift on completely ordinary scrolling unrelated to
+  the form. The difference here: only touch .mf-topbar when
+  visualViewport.offsetTop is actually nonzero (confirmed via the
+  live measurement above), and always correct back to exactly that
+  offset — never guess, never apply on scroll events that aren't
+  actually desynced.
 */
-function qfKickTopbarLayer() {
+(function () {
   var topbar = document.querySelector('.mf-topbar');
-  if (!topbar) return;
-  topbar.style.transform = 'translateZ(0)';
-  requestAnimationFrame(function () {
-    requestAnimationFrame(function () {
+  if (!topbar || !window.visualViewport) return;
+
+  function syncTopbarToViewport() {
+    var offset = window.visualViewport.offsetTop;
+    if (offset && offset !== 0) {
+      topbar.style.transform = 'translateY(' + offset + 'px)';
+    } else {
       topbar.style.transform = '';
-    });
-  });
-}
+    }
+  }
+
+  window.visualViewport.addEventListener('resize', syncTopbarToViewport);
+  window.visualViewport.addEventListener('scroll', syncTopbarToViewport);
+})();
