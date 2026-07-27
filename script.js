@@ -7,10 +7,8 @@ window.addEventListener('scroll', () => {
 ══════════════════════════════════ */
 var QF_FORMSPREE_ID = 'maqrlyza';
 var qfOriginalBodyHTML = null;
-
 /*
   Background scroll-lock while modal is open.
-
   Uses body.qf-lock{overflow:hidden} (see styles.css) rather than
   toggling position:fixed on body. position:fixed would take <body>
   out of normal document flow for as long as the modal is open, and
@@ -27,7 +25,6 @@ function qfLockScroll() {
 function qfUnlockScroll() {
   document.body.classList.remove('qf-lock');
 }
-
 function openQuoteForm() {
   var body = document.getElementById('qf-body');
   if (qfOriginalBodyHTML === null) {
@@ -43,12 +40,44 @@ function closeQuoteForm() {
   document.getElementById('qf-overlay').classList.remove('open');
   qfUnlockScroll();
 }
-
 function qfCloseOnOverlay(e) {
   if (e.target === document.getElementById('qf-overlay')) closeQuoteForm();
 }
 document.addEventListener('keydown', function (e) {
   if (e.key === 'Escape') closeQuoteForm();
+});
+
+/* ══════════════════════════════════
+   MOBILE HAMBURGER MENU
+══════════════════════════════════ */
+function toggleMfMenu() {
+  var menu = document.getElementById('mf-menu');
+  var btn = document.getElementById('mf-menu-btn');
+  if (!menu || !btn) return;
+  var willOpen = !menu.classList.contains('open');
+  menu.classList.toggle('open', willOpen);
+  btn.classList.toggle('open', willOpen);
+  btn.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+}
+function closeMfMenu() {
+  var menu = document.getElementById('mf-menu');
+  var btn = document.getElementById('mf-menu-btn');
+  if (!menu || !btn) return;
+  menu.classList.remove('open');
+  btn.classList.remove('open');
+  btn.setAttribute('aria-expanded', 'false');
+}
+// Close the menu on an outside tap, same pattern as the quote overlay.
+document.addEventListener('click', function (e) {
+  var menu = document.getElementById('mf-menu');
+  var btn = document.getElementById('mf-menu-btn');
+  if (!menu || !btn) return;
+  if (menu.classList.contains('open') && !menu.contains(e.target) && !btn.contains(e.target)) {
+    closeMfMenu();
+  }
+});
+document.addEventListener('keydown', function (e) {
+  if (e.key === 'Escape') closeMfMenu();
 });
 function qfBindForm() {
   var form = document.getElementById('qf-form');
