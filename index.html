@@ -11,8 +11,10 @@
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,600;0,700;1,500&family=Caveat:wght@500;600&family=Inter:wght@300;400;500;600&display=swap">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,600;0,700;1,500&family=Caveat:wght@500;600&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
 <style>
+  /* Hold text invisible until fonts are ready, then fade in fast.
+     Safety timeout below guarantees content shows even if font
+     loading detection fails for any reason. */
   html:not(.fonts-loaded) body{opacity:0;}
   html.fonts-loaded body,html.fonts-timeout body{
     opacity:1;transition:opacity .18s ease-out;
@@ -28,11 +30,13 @@
       done = true;
       html.classList.add(cls);
     }
+    // Safety net: never hide content for more than 600ms, no matter what.
     setTimeout(function(){ reveal('fonts-timeout'); }, 600);
 
     if (document.fonts && document.fonts.ready) {
       document.fonts.ready.then(function(){ reveal('fonts-loaded'); });
     } else {
+      // Old browser without the Font Loading API — just show content.
       reveal('fonts-timeout');
     }
   })();
@@ -82,22 +86,28 @@
       <div class="hero-art">
         <svg class="art-svg" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
           <circle cx="100" cy="100" r="92" stroke="#d8b968" stroke-width="0.8" stroke-dasharray="3 7" opacity="0.5"/>
+          <!-- window -->
           <rect x="38" y="34" width="124" height="78" rx="3" stroke="#d8b968" stroke-width="1.3"/>
           <line x1="38" y1="53" x2="162" y2="53" stroke="#d8b968" stroke-width="0.9" opacity="0.55"/>
           <line x1="38" y1="72" x2="162" y2="72" stroke="#d8b968" stroke-width="0.9" opacity="0.55"/>
           <line x1="38" y1="91" x2="162" y2="91" stroke="#d8b968" stroke-width="0.9" opacity="0.55"/>
           <line x1="100" y1="34" x2="100" y2="112" stroke="#d8b968" stroke-width="0.9" opacity="0.55"/>
+          <!-- desk -->
           <rect x="46" y="132" width="108" height="5" rx="1.5" fill="#d8b968"/>
           <line x1="53" y1="137" x2="53" y2="162" stroke="#d8b968" stroke-width="1.3"/>
           <line x1="147" y1="137" x2="147" y2="162" stroke="#d8b968" stroke-width="1.3"/>
+          <!-- monitor -->
           <rect x="80" y="112" width="34" height="21" rx="2" stroke="#d8b968" stroke-width="1.3"/>
           <line x1="97" y1="133" x2="97" y2="132" stroke="#d8b968" stroke-width="1.3"/>
+          <!-- chair -->
           <path d="M64 162 q0 -13 13 -13 q13 0 13 13" stroke="#d8b968" stroke-width="1.3"/>
           <line x1="67" y1="162" x2="67" y2="171" stroke="#d8b968" stroke-width="1.3"/>
           <line x1="87" y1="162" x2="87" y2="171" stroke="#d8b968" stroke-width="1.3"/>
+          <!-- plant -->
           <path d="M148 162 q-6 -17 0 -25 q6 8 0 25" fill="#d8b968" opacity="0.85"/>
           <path d="M148 162 q7 -13 3 -22 q-2 9 -3 22" fill="#d8b968" opacity="0.65"/>
           <rect x="140" y="162" width="16" height="13" rx="2" stroke="#d8b968" stroke-width="1.3"/>
+          <!-- sparkle accents -->
           <circle cx="55" cy="45" r="2" fill="#f7f4ee" opacity="0.7"/>
           <circle cx="150" cy="150" r="2.2" fill="#d8b968" opacity="0.6"/>
           <path d="M32 100 L34 105 L39 107 L34 109 L32 114 L30 109 L25 107 L30 105 Z" fill="#d8b968" opacity="0.7"/>
@@ -105,15 +115,15 @@
       </div>
       <div class="value-strip">
         <div class="value-item">
-          <div class="value-icon"><i class="fa-solid fa-handshake" aria-hidden="true"></i></div>
+          <div class="value-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#d8b968" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 13l4.5-4a2 2 0 0 1 2.2-.3l2.3 1.2"/><path d="M22 13l-4.5-4a2 2 0 0 0-2.2-.3l-2.3 1.2"/><path d="M9 11.5l1.7 1.6a1.6 1.6 0 0 0 2.2 0l.4-.4a1.6 1.6 0 0 1 2.2 0l1.7 1.6"/><path d="M2 13v3.5A1.5 1.5 0 0 0 3.5 18H5"/><path d="M22 13v3.5A1.5 1.5 0 0 1 20.5 18H19"/></svg></div>
           <div class="value-label">Dependable</div>
         </div>
         <div class="value-item">
-          <div class="value-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M12 2 L13.6 9.2 L21 11 L13.6 12.8 L12 20 L10.4 12.8 L3 11 L10.4 9.2 Z" fill="#d8b968"/><path d="M19 3 L19.6 5.4 L22 6 L19.6 6.6 L19 9 L18.4 6.6 L16 6 L18.4 5.4 Z" fill="#d8b968"/><path d="M5 14 L5.5 16 L7.5 16.5 L5.5 17 L5 19 L4.5 17 L2.5 16.5 L4.5 16 Z" fill="#d8b968"/></svg></div>
+          <div class="value-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#d8b968" stroke-width="1.6"><path d="M12 3l1.2 3.6L17 8l-3.8 1.4L12 13l-1.2-3.6L7 8l3.8-1.4L12 3z" stroke-linejoin="round"/><path d="M19 14l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7z" stroke-linejoin="round"/></svg></div>
           <div class="value-label">Thorough</div>
         </div>
         <div class="value-item">
-          <div class="value-icon"><i class="fa-solid fa-hand-holding-heart" aria-hidden="true"></i></div>
+          <div class="value-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#d8b968" stroke-width="1.6"><circle cx="12" cy="8" r="3.2"/><path d="M12 12.5c-4.2 0-6 2.6-6 5.2" stroke-linecap="round"/><path d="M15.5 15.2c1-.5 1.8-.2 2.3.6.6.9.2 2-.7 2.4-1 .4-2.1-.1-2.4-1.1" stroke-linecap="round"/></svg></div>
           <div class="value-label">Helpful</div>
         </div>
       </div>
@@ -135,6 +145,7 @@
     <span class="marquee-item">Thorough<span class="marquee-dot"></span></span>
     <span class="marquee-item">Helpful<span class="marquee-dot"></span></span>
     <span class="marquee-item">Orangeburg, SC<span class="marquee-dot"></span></span>
+    <!-- duplicate for seamless loop -->
     <span class="marquee-item">Offices<span class="marquee-dot"></span></span>
     <span class="marquee-item">Churches<span class="marquee-dot"></span></span>
     <span class="marquee-item">Professional Buildings<span class="marquee-dot"></span></span>
@@ -190,17 +201,17 @@
     </div>
     <div class="service-grid">
       <div class="service-card">
-        <div class="service-icon"><i class="fa-solid fa-briefcase" aria-hidden="true"></i></div>
+        <div class="service-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#d8b968" stroke-width="1.5"><rect x="4" y="9" width="16" height="11" rx="1"/><path d="M9 9V6a3 3 0 0 1 6 0v3" /></svg></div>
         <h3>Offices</h3>
         <p>Consistent, quiet service that keeps workspaces presentable for your team and your clients, visit after visit.</p>
       </div>
       <div class="service-card">
-        <div class="service-icon"><i class="fa-solid fa-church" aria-hidden="true"></i></div>
+        <div class="service-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#d8b968" stroke-width="1.5"><path d="M12 3v5M9.5 5.5h5" stroke-linecap="round"/><path d="M6 21V11l6-4 6 4v10" /><path d="M6 21h12" stroke-linecap="round"/></svg></div>
         <h3>Churches</h3>
         <p>Respectful, careful cleaning of sanctuaries and shared spaces, scheduled around your services and events.</p>
       </div>
       <div class="service-card">
-        <div class="service-icon"><i class="fa-solid fa-building-columns" aria-hidden="true"></i></div>
+        <div class="service-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#d8b968" stroke-width="1.5"><path d="M3 10l9-6 9 6" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 10v9h14v-9" /><path d="M9 19v-6h6v6" /></svg></div>
         <h3>Professional Buildings</h3>
         <p>Discreet, thorough attention to detail for spaces that need to look sharp and stay presentable every day.</p>
       </div>
@@ -361,30 +372,30 @@
 
 <section class="mf-pillars">
   <div class="mf-pillar">
-    <div class="mf-pillar-icon"><i class="fa-solid fa-handshake" aria-hidden="true"></i></div>
+    <div class="mf-pillar-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#d8b968" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 13l4.5-4a2 2 0 0 1 2.2-.3l2.3 1.2"/><path d="M22 13l-4.5-4a2 2 0 0 0-2.2-.3l-2.3 1.2"/><path d="M9 11.5l1.7 1.6a1.6 1.6 0 0 0 2.2 0l.4-.4a1.6 1.6 0 0 1 2.2 0l1.7 1.6"/><path d="M2 13v3.5A1.5 1.5 0 0 0 3.5 18H5"/><path d="M22 13v3.5A1.5 1.5 0 0 1 20.5 18H19"/></svg></div>
     <div class="mf-pillar-label">Dependable</div>
   </div>
   <div class="mf-pillar">
-    <div class="mf-pillar-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M12 2 L13.6 9.2 L21 11 L13.6 12.8 L12 20 L10.4 12.8 L3 11 L10.4 9.2 Z" fill="#d8b968"/><path d="M19 3 L19.6 5.4 L22 6 L19.6 6.6 L19 9 L18.4 6.6 L16 6 L18.4 5.4 Z" fill="#d8b968"/><path d="M5 14 L5.5 16 L7.5 16.5 L5.5 17 L5 19 L4.5 17 L2.5 16.5 L4.5 16 Z" fill="#d8b968"/></svg></div>
+    <div class="mf-pillar-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#d8b968" stroke-width="1.6"><path d="M12 3l1.2 3.6L17 8l-3.8 1.4L12 13l-1.2-3.6L7 8l3.8-1.4L12 3z" stroke-linejoin="round"/><path d="M19 14l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7z" stroke-linejoin="round"/></svg></div>
     <div class="mf-pillar-label">Thorough</div>
   </div>
   <div class="mf-pillar">
-    <div class="mf-pillar-icon"><i class="fa-solid fa-hand-holding-heart" aria-hidden="true"></i></div>
+    <div class="mf-pillar-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#d8b968" stroke-width="1.6"><circle cx="12" cy="8" r="3.2"/><path d="M12 12.5c-4.2 0-6 2.6-6 5.2" stroke-linecap="round"/><path d="M15.5 15.2c1-.5 1.8-.2 2.3.6.6.9.2 2-.7 2.4-1 .4-2.1-.1-2.4-1.1" stroke-linecap="round"/></svg></div>
     <div class="mf-pillar-label">Helpful</div>
   </div>
 </section>
 
 <section class="mf-services">
   <div class="mf-service">
-    <i class="fa-solid fa-briefcase" aria-hidden="true"></i>
+    <svg viewBox="0 0 24 24" fill="none" stroke="#d8b968" stroke-width="1.5"><rect x="4" y="9" width="16" height="11" rx="1"/><path d="M9 9V6a3 3 0 0 1 6 0v3"/></svg>
     <span>Offices</span>
   </div>
   <div class="mf-service">
-    <i class="fa-solid fa-church" aria-hidden="true"></i>
+    <svg viewBox="0 0 24 24" fill="none" stroke="#d8b968" stroke-width="1.5"><path d="M12 3v5M9.5 5.5h5" stroke-linecap="round"/><path d="M6 21V11l6-4 6 4v10"/><path d="M6 21h12" stroke-linecap="round"/></svg>
     <span>Churches</span>
   </div>
   <div class="mf-service">
-    <i class="fa-solid fa-building-columns" aria-hidden="true"></i>
+    <svg viewBox="0 0 24 24" fill="none" stroke="#d8b968" stroke-width="1.5"><path d="M3 10l9-6 9 6" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 10v9h14v-9"/><path d="M9 19v-6h6v6"/></svg>
     <span>Professional Buildings</span>
   </div>
 </section>
