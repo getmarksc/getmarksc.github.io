@@ -349,22 +349,14 @@
 </div><!-- /desktop-site -->
 
 <div class="mobile-site">
-<div class="mf-topbar" id="mf-top">
+<div class="mf-topbar">
   <div class="mf-logo">
     <span class="mf-logo-main">GET MARK</span>
     <span class="mf-logo-sub">Professional Cleaning</span>
   </div>
-  <button type="button" class="mf-menu-btn" id="mf-menu-btn" aria-label="Open menu" aria-expanded="false" aria-controls="mf-menu" onclick="toggleMfMenu()">
-    <span class="mf-menu-icon">
-      <svg class="mf-icon-bars" viewBox="0 0 24 24" fill="none" stroke="#f7f4ee" stroke-width="2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
-      <svg class="mf-icon-close" viewBox="0 0 24 24" fill="none" stroke="#f7f4ee" stroke-width="2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
-    </span>
+  <button type="button" class="mf-menu-btn" id="mf-menu-open-btn" aria-label="Open menu" aria-haspopup="true" aria-expanded="false" aria-controls="mf-menu-overlay" onclick="openMobileMenu()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="#f7f4ee" stroke-width="2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
   </button>
-  <nav class="mf-menu" id="mf-menu" aria-label="Mobile menu">
-    <a href="#mf-top" class="mf-menu-link" onclick="closeMfMenu()">Home</a>
-    <a href="#mf-services" class="mf-menu-link" onclick="closeMfMenu()">Services</a>
-    <a href="#mf-contact" class="mf-menu-link" onclick="closeMfMenu()">Contact</a>
-  </nav>
 </div>
 
 <header class="mf-hero">
@@ -393,58 +385,18 @@
   </div>
 </section>
 
-<section id="mf-services">
-  <div class="mf-services">
-    <div class="mf-service">
-      <svg viewBox="0 0 24 24" fill="none" stroke="#d8b968" stroke-width="1.5"><rect x="4" y="9" width="16" height="11" rx="1"/><path d="M9 9V6a3 3 0 0 1 6 0v3"/></svg>
-      <span>Offices</span>
-    </div>
-    <div class="mf-service">
-      <svg viewBox="0 0 24 24" fill="none" stroke="#d8b968" stroke-width="1.5"><path d="M12 3v5M9.5 5.5h5" stroke-linecap="round"/><path d="M6 21V11l6-4 6 4v10"/><path d="M6 21h12" stroke-linecap="round"/></svg>
-      <span>Churches</span>
-    </div>
-    <div class="mf-service">
-      <svg viewBox="0 0 24 24" fill="none" stroke="#d8b968" stroke-width="1.5"><path d="M3 10l9-6 9 6" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 10v9h14v-9"/><path d="M9 19v-6h6v6"/></svg>
-      <span>Professional Buildings</span>
-    </div>
+<section class="mf-services">
+  <div class="mf-service">
+    <svg viewBox="0 0 24 24" fill="none" stroke="#d8b968" stroke-width="1.5"><rect x="4" y="9" width="16" height="11" rx="1"/><path d="M9 9V6a3 3 0 0 1 6 0v3"/></svg>
+    <span>Offices</span>
   </div>
-
-  <div class="mf-process">
-    <p class="mf-process-eyebrow">How It Works</p>
-    <div class="mf-process-steps">
-      <div class="mf-process-step">
-        <div class="mf-step-circle">1</div>
-        <div class="mf-process-step-text">
-          <h3>Reach Out</h3>
-          <p>Call, text, or email us with a few details about your space. We&rsquo;ll answer any questions you have.</p>
-        </div>
-      </div>
-      <div class="mf-process-step">
-        <div class="mf-step-circle">2</div>
-        <div class="mf-process-step-text">
-          <h3>Schedule Your Cleaning</h3>
-          <p>We&rsquo;ll arrange a day and time that works best for your business.</p>
-        </div>
-      </div>
-      <div class="mf-process-step">
-        <div class="mf-step-circle">3</div>
-        <div class="mf-process-step-text">
-          <h3>We Get to Work</h3>
-          <p>We arrive on time and treat your building with real care and attention to detail.</p>
-        </div>
-      </div>
-      <div class="mf-process-step">
-        <div class="mf-step-circle">4</div>
-        <div class="mf-process-step-text">
-          <h3>We&rsquo;re Here When You Need Us</h3>
-          <p>Need to adjust your schedule? Just call or text &mdash; a helpful hand is always nearby.</p>
-        </div>
-      </div>
-    </div>
-    <div class="mf-process-actions">
-      <a href="#" class="mf-cta-btn mf-cta-btn-block" onclick="event.preventDefault();openQuoteForm()">Request a Free Quote</a>
-      <a href="tel:8439017602" class="mf-cta-btn-outline">Call Now</a>
-    </div>
+  <div class="mf-service">
+    <svg viewBox="0 0 24 24" fill="none" stroke="#d8b968" stroke-width="1.5"><path d="M12 3v5M9.5 5.5h5" stroke-linecap="round"/><path d="M6 21V11l6-4 6 4v10"/><path d="M6 21h12" stroke-linecap="round"/></svg>
+    <span>Churches</span>
+  </div>
+  <div class="mf-service">
+    <svg viewBox="0 0 24 24" fill="none" stroke="#d8b968" stroke-width="1.5"><path d="M3 10l9-6 9 6" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 10v9h14v-9"/><path d="M9 19v-6h6v6"/></svg>
+    <span>Professional Buildings</span>
   </div>
 </section>
 
@@ -486,6 +438,104 @@
   <span>Get Mark Professional Cleaning Services</span>
   <span>Orangeburg, SC &amp; surrounding communities</span>
 </footer>
+
+<!-- MOBILE FULL-SCREEN MENU -->
+<div class="mf-menu-overlay" id="mf-menu-overlay" role="dialog" aria-modal="true" aria-label="Site menu">
+  <div class="mf-menu-top">
+    <div class="mf-logo">
+      <span class="mf-logo-main">GET MARK</span>
+      <span class="mf-logo-sub">Professional Cleaning</span>
+    </div>
+    <button type="button" class="mf-menu-close" id="mf-menu-close-btn" aria-label="Close menu" onclick="closeMobileMenu()">&times;</button>
+  </div>
+
+  <div class="mf-menu-panel is-active" data-panel="main">
+    <a href="#" class="mf-menu-row" onclick="event.preventDefault();goHomeAndCloseMenu()">
+      <span>Home</span>
+    </a>
+    <button type="button" class="mf-menu-row" onclick="showMenuPanel('services')">
+      <span>Services</span>
+      <svg class="mf-menu-chevron" viewBox="0 0 24 24" fill="none" stroke="#d8b968" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+    </button>
+    <button type="button" class="mf-menu-row" onclick="showMenuPanel('contact')">
+      <span>Contact</span>
+      <svg class="mf-menu-chevron" viewBox="0 0 24 24" fill="none" stroke="#d8b968" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+    </button>
+  </div>
+
+  <div class="mf-menu-panel" data-panel="services">
+    <button type="button" class="mf-menu-back" onclick="showMenuPanel('main')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#d8b968" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>
+      Back
+    </button>
+
+    <h3 class="mf-menu-heading">Our Services</h3>
+    <div class="mf-menu-services">
+      <div class="mf-menu-service-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#d8b968" stroke-width="1.5"><rect x="4" y="9" width="16" height="11" rx="1"/><path d="M9 9V6a3 3 0 0 1 6 0v3"/></svg>
+        <span>Offices</span>
+      </div>
+      <div class="mf-menu-service-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#d8b968" stroke-width="1.5"><path d="M12 3v5M9.5 5.5h5" stroke-linecap="round"/><path d="M6 21V11l6-4 6 4v10"/><path d="M6 21h12" stroke-linecap="round"/></svg>
+        <span>Churches</span>
+      </div>
+      <div class="mf-menu-service-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#d8b968" stroke-width="1.5"><path d="M3 10l9-6 9 6" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 10v9h14v-9"/><path d="M9 19v-6h6v6"/></svg>
+        <span>Professional Buildings</span>
+      </div>
+    </div>
+
+    <h3 class="mf-menu-heading">How It Works</h3>
+    <div class="mf-menu-steps">
+      <div class="mf-menu-step">
+        <div class="mf-menu-step-num">1</div>
+        <div>
+          <div class="mf-menu-step-title">Reach Out</div>
+          <p>Call, text, or email us with a few details about your space.</p>
+        </div>
+      </div>
+      <div class="mf-menu-step">
+        <div class="mf-menu-step-num">2</div>
+        <div>
+          <div class="mf-menu-step-title">Schedule Your Cleaning</div>
+          <p>We&rsquo;ll arrange a day and time that works best for your business.</p>
+        </div>
+      </div>
+      <div class="mf-menu-step">
+        <div class="mf-menu-step-num">3</div>
+        <div>
+          <div class="mf-menu-step-title">We Get to Work</div>
+          <p>We arrive on time and treat your building with care and respect.</p>
+        </div>
+      </div>
+      <div class="mf-menu-step">
+        <div class="mf-menu-step-num">4</div>
+        <div>
+          <div class="mf-menu-step-title">We&rsquo;re Here When You Need Us</div>
+          <p>Need to adjust your schedule? Just call or text.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="mf-menu-actions">
+      <button type="button" class="mf-menu-cta" onclick="closeMobileMenu();openQuoteForm();">Request a Free Quote</button>
+      <a href="tel:8439017602" class="mf-menu-cta-secondary">Call 843-901-7602</a>
+    </div>
+  </div>
+
+  <div class="mf-menu-panel" data-panel="contact">
+    <button type="button" class="mf-menu-back" onclick="showMenuPanel('main')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#d8b968" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>
+      Back
+    </button>
+
+    <h3 class="mf-menu-heading">Get In Touch</h3>
+    <div class="mf-menu-actions">
+      <button type="button" class="mf-menu-cta" onclick="closeMobileMenu();openQuoteForm();">Request a Free Quote</button>
+      <a href="tel:8439017602" class="mf-menu-cta-secondary">Call 843-901-7602</a>
+    </div>
+  </div>
+</div>
 
 </div><!-- /mobile-site -->
 
