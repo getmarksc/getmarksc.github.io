@@ -71,8 +71,7 @@ function openQuoteForm() {
 function closeQuoteForm() {
   document.getElementById('qf-overlay').classList.remove('open');
   qfUnlockScroll();
-  if (qfIsIOS) qfForceViewportReconcile(); // secondary safety net; the
-  // focusout listener below is the primary fix and fires earlier.
+  if (qfIsIOS) qfForceViewportReconcile();
 }
 
 /*
@@ -108,23 +107,29 @@ var qfIsIOS = /iP(hone|od|ad)/.test(navigator.platform) ||
   wrong), and a 1px window.scrollTo nudge (a genuine scroll-position
   change, but still didn't do it).
 
-  Rather than guess at a third substitute, this does the thing that's
-  already proven to work, directly: it briefly shows this overlay's
-  own "open" state again — the exact same DOM change a real reopen
-  causes — and forces the browser to fully process it with a
-  synchronous layout read, then immediately reverts it. Because both
-  the show and the revert happen in the same synchronous script (no
-  await, no setTimeout in between), the browser has no opportunity to
-  actually paint the in-between frame, so none of this should be
-  visible — but the layout work it forces is the same full-page work
-  a real, visible reopen does.
+  This does the thing that's already proven to work, directly: it
+  briefly shows this overlay's own "open" state again — the exact
+  same DOM change a real reopen causes — and forces the browser to
+  fully process it with a synchronous layout read, then immediately
+  reverts it. Because both the show and the revert happen in the same
+  synchronous script (no await, no setTimeout in between), the
+  browser has no opportunity to actually paint the in-between frame.
 
-  Still worth confirming on-device rather than assumed. If even this
-  doesn't fix it, that's a strong signal the fix requires something
-  this project's JS structurally can't replicate, and the more
-  sensible next step is accepting this as a minor, hard-to-eliminate
-  iOS rendering quirk (plenty of production sites carry ones like it)
-  rather than continuing to patch around it.
+  IMPORTANT — only called from closeQuoteForm(), and only from there.
+  This function assumes the overlay is ALREADY closed when it runs
+  (closeQuoteForm() removes the 'open' class before calling this), so
+  it's safe to unconditionally add-then-remove. An earlier version
+  also called this from a general focusout listener on every field —
+  that was wrong: focusout fires on every field-to-field transition
+  while the form is still legitimately open and mid-fill, not just on
+  final exit, so this function's add-then-remove would land on an
+  overlay that was NOT supposed to close, genuinely removing 'open'
+  and kicking the user out mid-typing — and since that happened
+  outside closeQuoteForm(), qfUnlockScroll() never ran either, leaving
+  the page stuck scroll-locked afterward. Confirmed on-device as a
+  real regression. Do not reintroduce a trigger for this outside of
+  closeQuoteForm() without first making it state-aware (check whether
+  the overlay was already open before deciding which way to toggle).
 */
 function qfForceViewportReconcile() {
   var overlay = document.getElementById('qf-overlay');
@@ -133,20 +138,6 @@ function qfForceViewportReconcile() {
   void overlay.offsetHeight; // forces a synchronous layout pass while "open"
   overlay.classList.remove('open');
 }
-// General fix: any time a field inside the quote form loses focus,
-// for ANY reason (submitting, tapping the X, tapping the overlay
-// backdrop, tabbing to the next field), schedule this once the
-// keyboard-dismiss animation has had room to actually finish. Bound
-// once here, on the overlay itself (which persists across every
-// open/close), rather than re-bound per open like the form's own
-// submit listener — focusout bubbles, so this catches every field
-// without needing a listener on each one individually. Gated to iOS
-// only, same reasoning as qfIsIOS above.
-document.getElementById('qf-overlay').addEventListener('focusout', function (e) {
-  if (qfIsIOS && e.target && e.target.classList && e.target.classList.contains('qf-input')) {
-    setTimeout(qfForceViewportReconcile, 350);
-  }
-});
 function qfCloseOnOverlay(e) {
   if (e.target === document.getElementById('qf-overlay')) closeQuoteForm();
 }
