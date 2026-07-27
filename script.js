@@ -71,44 +71,67 @@ function openQuoteForm() {
 function closeQuoteForm() {
   document.getElementById('qf-overlay').classList.remove('open');
   qfUnlockScroll();
-  qfForceViewportReconcile(); // secondary safety net; the focusout
-  // listener below is the primary fix and fires earlier than this.
+  if (qfIsIOS) qfForceViewportReconcile(); // secondary safety net; the
+  // focusout listener below is the primary fix and fires earlier.
 }
 
 /*
+  This whole reconcile mechanism only exists to work around a
+  confirmed iOS-Safari-specific rendering quirk (see
+  qfForceViewportReconcile() below for the full story). It has no
+  reason to run anywhere else, so it's gated behind this check —
+  every other browser (Chrome, Firefox, Edge, Samsung Internet,
+  desktop or mobile) never executes any of this code at all, which is
+  a stronger guarantee of zero side effects elsewhere than just
+  reasoning that the technique "should" be harmless.
+
+  iPadOS reports itself as desktop Safari in the user agent string
+  (no "iPhone"/"iPad" token), so it's detected via the Mac-platform +
+  touch-support combination instead — a standard, widely used pattern
+  for this exact situation.
+*/
+var qfIsIOS = /iP(hone|od|ad)/.test(navigator.platform) ||
+  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+/*
   Forces iOS to fully reconcile its viewport bookkeeping on demand,
-  instead of waiting for the user to accidentally trigger it (by
-  scrolling to a page extreme, or by tapping the tel: link and
-  bringing up iOS's own native "Call this number?" sheet — both
-  confirmed on-device to fix the header, every time).
+  instead of waiting for the user to accidentally trigger it.
 
-  Why THIS specific technique: an earlier attempt forced a reflow by
-  toggling display:none/'' on .mf-topbar itself — confirmed on-device,
-  across several different trigger timings, to do nothing at all.
-  That makes sense in hindsight: a display toggle only recalculates
-  local page layout. It doesn't touch whatever viewport-level state
-  iOS is actually getting confused about, which real scrolling and
-  the native call sheet both clearly do reach. window.scrollTo() is a
-  genuine scroll-position change, not just a local layout op, so it's
-  a plausible way to trigger the same kind of reconciliation as an
-  actual scroll — worth testing directly, since it hasn't actually
-  been tried at this trigger timing before (an earlier version of
-  this function used scrollTo, but only ran at modal-close time,
-  before the general focusout-based timing below existed).
+  Two things are CONFIRMED on-device to reliably fix the header:
+  scrolling to a page extreme, and tapping the tel: link (which opens
+  iOS's own native "Call this number?" sheet). A third thing that
+  also confirmed fixes it: manually reopening this very quote form.
 
-  Still a hypothesis, not a guarantee. If this doesn't work either,
-  that's meaningful: it would mean the fix requires something at the
-  OS/native level that plain page JS structurally cannot reach on
-  iOS Safari, and the realistic options become either accepting this
-  as a minor, hard-to-eliminate rendering quirk, or reporting it to
-  WebKit as a browser bug rather than continuing to patch around it.
+  Two different guesses at REPRODUCING that effect were tried and
+  both failed on-device: toggling display on .mf-topbar itself (too
+  local — doesn't touch whatever viewport-level state is actually
+  wrong), and a 1px window.scrollTo nudge (a genuine scroll-position
+  change, but still didn't do it).
+
+  Rather than guess at a third substitute, this does the thing that's
+  already proven to work, directly: it briefly shows this overlay's
+  own "open" state again — the exact same DOM change a real reopen
+  causes — and forces the browser to fully process it with a
+  synchronous layout read, then immediately reverts it. Because both
+  the show and the revert happen in the same synchronous script (no
+  await, no setTimeout in between), the browser has no opportunity to
+  actually paint the in-between frame, so none of this should be
+  visible — but the layout work it forces is the same full-page work
+  a real, visible reopen does.
+
+  Still worth confirming on-device rather than assumed. If even this
+  doesn't fix it, that's a strong signal the fix requires something
+  this project's JS structurally can't replicate, and the more
+  sensible next step is accepting this as a minor, hard-to-eliminate
+  iOS rendering quirk (plenty of production sites carry ones like it)
+  rather than continuing to patch around it.
 */
 function qfForceViewportReconcile() {
-  var y = window.scrollY;
-  window.scrollTo(0, y + 1);
-  requestAnimationFrame(function () {
-    window.scrollTo(0, y);
-  });
+  var overlay = document.getElementById('qf-overlay');
+  if (!overlay) return;
+  overlay.classList.add('open');
+  void overlay.offsetHeight; // forces a synchronous layout pass while "open"
+  overlay.classList.remove('open');
 }
 // General fix: any time a field inside the quote form loses focus,
 // for ANY reason (submitting, tapping the X, tapping the overlay
@@ -117,9 +140,10 @@ function qfForceViewportReconcile() {
 // once here, on the overlay itself (which persists across every
 // open/close), rather than re-bound per open like the form's own
 // submit listener — focusout bubbles, so this catches every field
-// without needing a listener on each one individually.
+// without needing a listener on each one individually. Gated to iOS
+// only, same reasoning as qfIsIOS above.
 document.getElementById('qf-overlay').addEventListener('focusout', function (e) {
-  if (e.target && e.target.classList && e.target.classList.contains('qf-input')) {
+  if (qfIsIOS && e.target && e.target.classList && e.target.classList.contains('qf-input')) {
     setTimeout(qfForceViewportReconcile, 350);
   }
 });
