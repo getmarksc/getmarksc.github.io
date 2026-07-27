@@ -7,17 +7,14 @@ window.addEventListener('scroll', () => {
 ══════════════════════════════════ */
 var QF_FORMSPREE_ID = 'maqrlyza';
 var qfOriginalBodyHTML = null;
+
 /*
   Background scroll-lock while modal is open.
+
   Uses body.qf-lock{overflow:hidden} (see styles.css) rather than
-  toggling position:fixed on body. position:fixed would take <body>
-  out of normal document flow for as long as the modal is open, and
-  .mf-topbar's position:sticky depends on that normal flow for its
-  stuck/unstuck calculation — disrupting it caused the header to
-  visibly shift, especially across an iOS keyboard open/close cycle
-  while a form field was focused. overflow:hidden blocks background
-  scrolling without ever removing body from flow, so the sticky
-  header's containing block is never disrupted.
+  toggling position:fixed on body. overflow:hidden blocks background
+  scrolling without ever removing body from document flow. Shared by
+  both the quote form modal and the mobile full-screen menu below.
 */
 function qfLockScroll() {
   document.body.classList.add('qf-lock');
@@ -25,6 +22,7 @@ function qfLockScroll() {
 function qfUnlockScroll() {
   document.body.classList.remove('qf-lock');
 }
+
 function openQuoteForm() {
   var body = document.getElementById('qf-body');
   if (qfOriginalBodyHTML === null) {
@@ -40,44 +38,12 @@ function closeQuoteForm() {
   document.getElementById('qf-overlay').classList.remove('open');
   qfUnlockScroll();
 }
+
 function qfCloseOnOverlay(e) {
   if (e.target === document.getElementById('qf-overlay')) closeQuoteForm();
 }
 document.addEventListener('keydown', function (e) {
   if (e.key === 'Escape') closeQuoteForm();
-});
-
-/* ══════════════════════════════════
-   MOBILE HAMBURGER MENU
-══════════════════════════════════ */
-function toggleMfMenu() {
-  var menu = document.getElementById('mf-menu');
-  var btn = document.getElementById('mf-menu-btn');
-  if (!menu || !btn) return;
-  var willOpen = !menu.classList.contains('open');
-  menu.classList.toggle('open', willOpen);
-  btn.classList.toggle('open', willOpen);
-  btn.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
-}
-function closeMfMenu() {
-  var menu = document.getElementById('mf-menu');
-  var btn = document.getElementById('mf-menu-btn');
-  if (!menu || !btn) return;
-  menu.classList.remove('open');
-  btn.classList.remove('open');
-  btn.setAttribute('aria-expanded', 'false');
-}
-// Close the menu on an outside tap, same pattern as the quote overlay.
-document.addEventListener('click', function (e) {
-  var menu = document.getElementById('mf-menu');
-  var btn = document.getElementById('mf-menu-btn');
-  if (!menu || !btn) return;
-  if (menu.classList.contains('open') && !menu.contains(e.target) && !btn.contains(e.target)) {
-    closeMfMenu();
-  }
-});
-document.addEventListener('keydown', function (e) {
-  if (e.key === 'Escape') closeMfMenu();
 });
 function qfBindForm() {
   var form = document.getElementById('qf-form');
@@ -127,3 +93,39 @@ function qfShowThanks() {
       '<button class="qf-submit" type="button" onclick="closeQuoteForm()">Close</button>' +
     '</div>';
 }
+
+/* ══════════════════════════════════
+   MOBILE FULL-SCREEN MENU
+══════════════════════════════════ */
+function openMobileMenu() {
+  var overlay = document.getElementById('mf-menu-overlay');
+  var btn = document.getElementById('mf-menu-open-btn');
+  if (!overlay) return;
+  showMenuPanel('main');
+  overlay.classList.add('open');
+  if (btn) btn.setAttribute('aria-expanded', 'true');
+  qfLockScroll();
+}
+function closeMobileMenu() {
+  var overlay = document.getElementById('mf-menu-overlay');
+  var btn = document.getElementById('mf-menu-open-btn');
+  if (!overlay) return;
+  overlay.classList.remove('open');
+  if (btn) btn.setAttribute('aria-expanded', 'false');
+  qfUnlockScroll();
+}
+function showMenuPanel(name) {
+  var panels = document.querySelectorAll('.mf-menu-panel');
+  panels.forEach(function (p) {
+    p.classList.toggle('is-active', p.getAttribute('data-panel') === name);
+  });
+}
+function goHomeAndCloseMenu() {
+  closeMobileMenu();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+document.addEventListener('keydown', function (e) {
+  if (e.key !== 'Escape') return;
+  var menuOverlay = document.getElementById('mf-menu-overlay');
+  if (menuOverlay && menuOverlay.classList.contains('open')) closeMobileMenu();
+});
