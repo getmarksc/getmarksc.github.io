@@ -11,50 +11,21 @@ var qfOriginalBodyHTML = null;
 /*
   Background scroll-lock while modal is open.
 
-  Rationale: while the popup is open, the page behind it is still
-  scrollable (confirmed by observation), alongside the modal's own
-  internal overflow-y:auto scroll region. Two independent active
-  scroll contexts at once, combined with the keyboard opening/closing
-  as the user fills the form, is a plausible contributor to iOS's
-  visualViewport desync behavior addressed elsewhere in this file.
-
-  Note: a scroll-lock attempt was tried previously (see project
-  handoff) using position:fixed + top:-Npx on <body>, and held up for
-  one test sequence before breaking on a slightly different one. This
-  implementation is deliberately identical in technique (the standard
-  approach) but is being reintroduced as an addition alongside the
-  separately-proven visualViewport ceiling/overscroll guard below,
-  rather than as a replacement for it — so if this alone doesn't
-  fully resolve things, it can be isolated and removed without
-  affecting the parts already confirmed working.
-
-  SIDE EFFECT worth knowing about: while body is position:fixed, it's
-  removed from document flow, so document.documentElement.scrollHeight
-  collapses to roughly window.innerHeight while the modal is open. On
-  unlock, qfUnlockScroll() restores window.scrollY via scrollTo() to
-  wherever the page was when the modal opened. This turned out not to
-  be the driver of the header issue — that was .mf-topbar's own
-  position:fixed behavior and a since-removed JS correction for it
-  (see styles.css and git history for that story) — but it's real
-  behavior of this function worth knowing if scrollY/scrollHeight
-  ever look odd in a future debugging session.
+  Uses body.qf-lock{overflow:hidden} (see styles.css) rather than
+  toggling position:fixed on body. position:fixed would take <body>
+  out of normal document flow for as long as the modal is open, and
+  .mf-topbar's position:sticky depends on that normal flow for its
+  stuck/unstuck calculation — disrupting it caused the header to
+  visibly shift, especially across an iOS keyboard open/close cycle
+  while a form field was focused. overflow:hidden blocks background
+  scrolling without ever removing body from flow, so the sticky
+  header's containing block is never disrupted.
 */
-var qfScrollLockY = 0;
 function qfLockScroll() {
-  qfScrollLockY = window.scrollY;
-  document.body.style.position = 'fixed';
-  document.body.style.top = '-' + qfScrollLockY + 'px';
-  document.body.style.left = '0';
-  document.body.style.right = '0';
-  document.body.style.width = '100%';
+  document.body.classList.add('qf-lock');
 }
 function qfUnlockScroll() {
-  document.body.style.position = '';
-  document.body.style.top = '';
-  document.body.style.left = '';
-  document.body.style.right = '';
-  document.body.style.width = '';
-  window.scrollTo(0, qfScrollLockY);
+  document.body.classList.remove('qf-lock');
 }
 
 function openQuoteForm() {
@@ -71,73 +42,8 @@ function openQuoteForm() {
 function closeQuoteForm() {
   document.getElementById('qf-overlay').classList.remove('open');
   qfUnlockScroll();
-  if (qfIsIOS) qfForceViewportReconcile();
 }
 
-/*
-  This whole reconcile mechanism only exists to work around a
-  confirmed iOS-Safari-specific rendering quirk (see
-  qfForceViewportReconcile() below for the full story). It has no
-  reason to run anywhere else, so it's gated behind this check —
-  every other browser (Chrome, Firefox, Edge, Samsung Internet,
-  desktop or mobile) never executes any of this code at all, which is
-  a stronger guarantee of zero side effects elsewhere than just
-  reasoning that the technique "should" be harmless.
-
-  iPadOS reports itself as desktop Safari in the user agent string
-  (no "iPhone"/"iPad" token), so it's detected via the Mac-platform +
-  touch-support combination instead — a standard, widely used pattern
-  for this exact situation.
-*/
-var qfIsIOS = /iP(hone|od|ad)/.test(navigator.platform) ||
-  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-
-/*
-  Forces iOS to fully reconcile its viewport bookkeeping on demand,
-  instead of waiting for the user to accidentally trigger it.
-
-  Two things are CONFIRMED on-device to reliably fix the header:
-  scrolling to a page extreme, and tapping the tel: link (which opens
-  iOS's own native "Call this number?" sheet). A third thing that
-  also confirmed fixes it: manually reopening this very quote form.
-
-  Two different guesses at REPRODUCING that effect were tried and
-  both failed on-device: toggling display on .mf-topbar itself (too
-  local — doesn't touch whatever viewport-level state is actually
-  wrong), and a 1px window.scrollTo nudge (a genuine scroll-position
-  change, but still didn't do it).
-
-  This does the thing that's already proven to work, directly: it
-  briefly shows this overlay's own "open" state again — the exact
-  same DOM change a real reopen causes — and forces the browser to
-  fully process it with a synchronous layout read, then immediately
-  reverts it. Because both the show and the revert happen in the same
-  synchronous script (no await, no setTimeout in between), the
-  browser has no opportunity to actually paint the in-between frame.
-
-  IMPORTANT — only called from closeQuoteForm(), and only from there.
-  This function assumes the overlay is ALREADY closed when it runs
-  (closeQuoteForm() removes the 'open' class before calling this), so
-  it's safe to unconditionally add-then-remove. An earlier version
-  also called this from a general focusout listener on every field —
-  that was wrong: focusout fires on every field-to-field transition
-  while the form is still legitimately open and mid-fill, not just on
-  final exit, so this function's add-then-remove would land on an
-  overlay that was NOT supposed to close, genuinely removing 'open'
-  and kicking the user out mid-typing — and since that happened
-  outside closeQuoteForm(), qfUnlockScroll() never ran either, leaving
-  the page stuck scroll-locked afterward. Confirmed on-device as a
-  real regression. Do not reintroduce a trigger for this outside of
-  closeQuoteForm() without first making it state-aware (check whether
-  the overlay was already open before deciding which way to toggle).
-*/
-function qfForceViewportReconcile() {
-  var overlay = document.getElementById('qf-overlay');
-  if (!overlay) return;
-  overlay.classList.add('open');
-  void overlay.offsetHeight; // forces a synchronous layout pass while "open"
-  overlay.classList.remove('open');
-}
 function qfCloseOnOverlay(e) {
   if (e.target === document.getElementById('qf-overlay')) closeQuoteForm();
 }
@@ -192,21 +98,3 @@ function qfShowThanks() {
       '<button class="qf-submit" type="button" onclick="closeQuoteForm()">Close</button>' +
     '</div>';
 }
-
-/*
-  REMOVED: the visualViewport transform-correction that used to live
-  here (and the qfKeyboardActiveUntil tracking that gated it) was
-  built specifically to work around position:fixed's old iOS
-  desync bug. .mf-topbar is now position:sticky (see styles.css),
-  which doesn't have that bug — sticky is positioned through normal
-  layout/scroll logic, not the separate viewport-pinned compositor
-  layer fixed uses.
-
-  Confirmed on-device that this old code was actively causing a new
-  symptom rather than fixing anything: for up to a second after
-  closing the quote form, it was still applying a JS transform to the
-  now-sticky header, which visibly dragged it out of place while
-  scrolling in that window and snapped it back once the atBottom
-  guard tripped. Sticky elements don't want or need any transform, so
-  the fix is removal, not another guard.
-*/
