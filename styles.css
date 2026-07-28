@@ -404,6 +404,23 @@
   font-size:.77rem;line-height:1.5;color:rgba(247,244,238,0.65);
 }
 
+/* Contact panel: a short note plus real, tappable email/phone lines,
+   so the panel reads as actual content rather than two bare buttons.
+   Same visual family as .mf-menu-step above, adapted for a link. */
+.mf-menu-note{
+  font-size:.85rem;line-height:1.6;color:rgba(247,244,238,0.7);
+  margin-bottom:1.6rem;
+}
+.mf-menu-contact-lines{margin-bottom:.4rem;}
+.mf-menu-contact-line{
+  display:flex;align-items:center;gap:.8rem;
+  padding:.95rem 0;border-bottom:1px solid rgba(255,255,255,0.08);
+  font-family:'Fraunces',serif;font-weight:600;font-size:1rem;
+  color:var(--cream);text-decoration:none;
+}
+.mf-menu-contact-line:last-child{border-bottom:none;}
+.mf-menu-contact-line svg{width:1.15rem;height:1.15rem;flex-shrink:0;color:var(--gold-soft);}
+
 .mf-menu-actions{
   margin-top:auto;padding-top:1.6rem;
   display:flex;flex-direction:column;gap:.8rem;
